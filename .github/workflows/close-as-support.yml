@@ -19,9 +19,9 @@ jobs:
       BODY: >
         ${{ inputs.reason }}
 
-        While we would love to provide more assistance the GitHub Desktop team
-        is unable provide individual support for issues that aren't the result
-        of a problem with the application itself. Please see [GitHub's community
+        We'd love to help but sadly the GitHub Desktop team is unable provide
+        individual support for issues that aren't the result of a problem with
+        the application itself. Please see [GitHub's community
         discussions](https://github.com/orgs/community/discussions) where you
         can engage with other Desktop users and ask for help with your issue.
 
@@ -33,8 +33,7 @@ jobs:
         Here are some tips for writing reproduction steps:
 
           * Step by step instructions accompanied by screenshots or screencasts
-        are
-        the best.
+        are the best.
           * Be as specific as possible; include as much detail as you can.
           * If not already provided, include:
               * the version of GitHub Desktop you are using.
@@ -42,11 +41,10 @@ jobs:
               * any environment factors you can think of.
               * any custom configuration you are using.
               * a log file from the day you experienced the issue (access
-        logfiles
-        via the file menu and select Help > Show Logs in Finder/Explorer.
+        logfiles via the file menu and select Help > Show Logs in
+        Finder/Explorer.
           * If relevant and can be shared, provide the repository or code you
-        are
-        using.
+        are using.
     steps:
       - run: gh issue comment "${{ github.event.issue.number }}" --body "$BODY"
       - run: gh issue close "${{ github.event.issue.number }}"
