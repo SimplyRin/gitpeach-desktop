@@ -1,5 +1,6 @@
 {
   "releases": {
+    "3.4.14-test1": ["[New] Automated test release"],
     "3.4.13": [
       "[Fixed] Mitigates several vulnerabilities related to Git's credential helper protocol - CVE-2025-23040, CVE-2024-50349, CVE-2024-52006, CVE-2024-50338, CVE-2024-53263"
     ],
