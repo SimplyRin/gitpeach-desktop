@@ -16,13 +16,22 @@ fieldset.vertical-segmented-control {
     @include ellipsis;
   }
 
-  ul {
-    list-style: none;
+  div.vertical-segmented-control {
     padding: 0;
     margin: 0;
 
-    li {
-      padding: var(--spacing);
+    input {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      width: 0;
+      height: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .segmented-item {
+      padding: 0;
       margin: 0;
       border-left: var(--base-border);
       border-right: var(--base-border);
@@ -53,7 +62,7 @@ fieldset.vertical-segmented-control {
         // should have its top border be the same color as the background
         // of the selected one. This makes for crisp division between
         // selected and non-selected without a gray border to interfere.
-        & + li {
+        & + .segmented-item {
           border-top-color: var(--box-selected-active-background-color);
         }
       }
@@ -68,16 +77,20 @@ fieldset.vertical-segmented-control {
       }
 
       .title {
+        padding: var(--spacing);
+        padding-bottom: 0;
         font-weight: var(--font-weight-semibold);
         @include ellipsis;
       }
 
       p {
+        padding: var(--spacing);
+        padding-top: 0;
         color: var(--text-secondary-color);
       }
     }
 
-    &:focus-visible li {
+    &:focus-visible label {
       &:first-child {
         border-top-left-radius: var(--outlined-border-radius);
         border-top-right-radius: var(--outlined-border-radius);

@@ -155,7 +155,7 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
     )
   }
 
-  private onKeyDown = (event: React.KeyboardEvent<HTMLUListElement>) => {
+  private onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     const selectedIndex = this.findSelectedIndex(this.props.items)
 
     if (event.key === 'ArrowUp') {
@@ -195,7 +195,7 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
     return (
       <fieldset className="vertical-segmented-control" ref={this.onFieldsetRef}>
         {label}
-        <ul
+        <div
           id={this.state.listId}
           className="vertical-segmented-control"
           tabIndex={0}
@@ -204,7 +204,7 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
           aria-activedescendant={activeDescendant}
         >
           {this.props.items.map((item, index) => this.renderItem(item, index))}
-        </ul>
+        </div>
       </fieldset>
     )
   }

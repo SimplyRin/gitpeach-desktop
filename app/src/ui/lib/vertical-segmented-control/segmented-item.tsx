@@ -1,3 +1,4 @@
+import classNames from 'classnames'
 import * as React from 'react'
 
 interface ISegmentedItemProps<T> {
@@ -65,18 +66,20 @@ export class SegmentedItem<T> extends React.Component<
 
     return (
       // eslint-disable-next-line jsx-a11y/click-events-have-key-events
-      <li
-        className={className}
-        onClick={this.onClick}
-        onDoubleClick={this.onDoubleClick}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role
-        role="radio"
-        id={this.props.id}
-        aria-checked={isSelected ? 'true' : 'false'}
-      >
-        <div className="title">{this.props.title}</div>
-        {description}
-      </li>
+      <div className={classNames('segmented-item', { selected: isSelected })}>
+        <input
+          type="radio"
+          className={className}
+          onClick={this.onClick}
+          onDoubleClick={this.onDoubleClick}
+          id={this.props.id}
+          aria-checked={isSelected ? 'true' : 'false'}
+        />
+        <label className={className} htmlFor={this.props.id}>
+          <div className="title">{this.props.title}</div>
+          {description}
+        </label>
+      </div>
     )
   }
 }
