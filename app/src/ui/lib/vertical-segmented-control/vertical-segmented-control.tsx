@@ -178,8 +178,6 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
         className="vertical-segmented-control"
         ref={this.onFieldsetRef}
         id={this.state.listId}
-        // tabIndex={0}
-        // onKeyDown={this.onKeyDown}
         role="radiogroup"
       >
         {label}
