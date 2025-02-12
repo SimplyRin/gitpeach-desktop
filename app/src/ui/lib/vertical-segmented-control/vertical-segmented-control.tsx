@@ -155,23 +155,23 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
     )
   }
 
-  private onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const selectedIndex = this.findSelectedIndex(this.props.items)
+  // private onKeyDown = (event: React.KeyboardEvent<HTMLFieldSetElement>) => {
+  //   const selectedIndex = this.findSelectedIndex(this.props.items)
 
-    if (event.key === 'ArrowUp') {
-      if (selectedIndex > 0) {
-        this.props.onSelectionChanged(this.props.items[selectedIndex - 1].key)
-      }
-      event.preventDefault()
-    } else if (event.key === 'ArrowDown') {
-      if (selectedIndex < this.props.items.length - 1) {
-        this.props.onSelectionChanged(this.props.items[selectedIndex + 1].key)
-      }
-      event.preventDefault()
-    } else if (event.key === 'Enter') {
-      this.submitForm()
-    }
-  }
+  //   if (event.key === 'ArrowUp') {
+  //     if (selectedIndex > 0) {
+  //       this.props.onSelectionChanged(this.props.items[selectedIndex - 1].key)
+  //     }
+  //     event.preventDefault()
+  //   } else if (event.key === 'ArrowDown') {
+  //     if (selectedIndex < this.props.items.length - 1) {
+  //       this.props.onSelectionChanged(this.props.items[selectedIndex + 1].key)
+  //     }
+  //     event.preventDefault()
+  //   } else if (event.key === 'Enter') {
+  //     this.submitForm()
+  //   }
+  // }
 
   private onFieldsetRef = (ref: HTMLFieldSetElement | null) => {
     this.formRef = ref ? ref.form : null
@@ -186,30 +186,21 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
       <legend>{this.props.label}</legend>
     ) : undefined
 
-    const selectedIndex = this.findSelectedIndex(this.props.items)
-    const activeDescendant = this.getListItemId(selectedIndex)
-
     // Using a fieldset with a legend seems to be the way to go here since
     // we can't use a label to point to a list (https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories#Form_labelable).
     // See http://stackoverflow.com/a/13273907/2114
     return (
-      <fieldset className="vertical-segmented-control" ref={this.onFieldsetRef}>
+      <fieldset
+        className="vertical-segmented-control"
+        ref={this.onFieldsetRef}
+        id={this.state.listId}
+        // tabIndex={0}
+        // onKeyDown={this.onKeyDown}
+        role="radiogroup"
+      >
         {label}
-        <div
-          id={this.state.listId}
-          className="vertical-segmented-control"
-          tabIndex={0}
-          onKeyDown={this.onKeyDown}
-          role="radiogroup"
-          aria-activedescendant={activeDescendant}
-        >
-          {this.props.items.map((item, index) => this.renderItem(item, index))}
-        </div>
+        {this.props.items.map((item, index) => this.renderItem(item, index))}
       </fieldset>
     )
-  }
-
-  private findSelectedIndex(items: ReadonlyArray<ISegmentedItem<T>>) {
-    return items.findIndex(item => item.key === this.props.selectedKey)
   }
 }
