@@ -31,10 +31,12 @@ interface IRadioGroupProps<T> {
   readonly renderRadioButtonLabelContents: (key: T) => JSX.Element | string
 }
 
+type Key = string | number
+
 /**
  * A component for presenting a small number of choices to the user.
  */
-export class RadioGroup<T extends string> extends React.Component<
+export class RadioGroup<T extends Key> extends React.Component<
   IRadioGroupProps<T>
 > {
   private onSelectionChanged = (key: T) => {

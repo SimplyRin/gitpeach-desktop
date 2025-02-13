@@ -374,6 +374,15 @@ export class App extends React.Component<IAppProps, IAppState> {
     }
 
     this.setOnOpenBanner()
+
+    const repo = this.getRepository()
+
+    if (repo && repo instanceof Repository) {
+      this.showPopup({
+        type: PopupType.CreateBranch,
+        repository: repo,
+      })
+    }
   }
 
   /**

@@ -1,7 +1,9 @@
 @import '../mixins';
 
-fieldset.vertical-segmented-control {
-  // Reset styles for fieldset
+.vertical-segmented-control {
+  display: flex;
+  flex-direction: column;
+
   border: none;
   margin: 0;
   padding: 0;
@@ -17,13 +19,13 @@ fieldset.vertical-segmented-control {
   }
 
   input {
-    position: absolute;
-    left: -9999px;
-    top: -9999px;
-    width: 0;
-    height: 0;
-    opacity: 0;
-    pointer-events: none;
+    // position: absolute;
+    // left: -9999px;
+    // top: -9999px;
+    // width: 0;
+    // height: 0;
+    // opacity: 0;
+    // pointer-events: none;
   }
 
   .segmented-item {

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { createUniqueId, releaseUniqueId } from '../id-pool'
 import { SegmentedItem } from './segmented-item'
+import { RadioGroup } from '../radio-group'
 
 type Key = string | number
 
@@ -77,8 +78,6 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
   IVerticalSegmentedControlProps<T>,
   IVerticalSegmentedControlState
 > {
-  private formRef: HTMLFormElement | null = null
-
   public constructor(props: IVerticalSegmentedControlProps<T>) {
     super(props)
     this.state = {}
@@ -115,74 +114,79 @@ export class VerticalSegmentedControl<T extends Key> extends React.Component<
     }
   }
 
-  private submitForm() {
-    const form = this.formRef
-    if (form) {
-      // NB: In order to play nicely with React's custom event dispatching,
-      // we dispatch an event instead of calling `submit` directly on the
-      // form.
-      form.dispatchEvent(new Event('submit'))
-    }
-  }
+  // private onItemDoubleClick = (key: T) => {
+  //   // At this point the onSelectionChanged event should've been called already
+  //   // with the right key
+  //   // this.submitForm()
+  // }
 
-  private onItemDoubleClick = (key: T) => {
-    // At this point the onSelectionChanged event should've been called already
-    // with the right key
-    this.submitForm()
-  }
+  // private onItemSelected = (key: T) => {
+  //   if (key !== this.props.selectedKey) {
+  //     this.props.onSelectionChanged(key)
+  //   }
+  // }
 
-  private onItemSelected = (key: T) => {
-    if (key !== this.props.selectedKey) {
-      this.props.onSelectionChanged(key)
-    }
-  }
+  // private getListItemId(index: number) {
+  //   return `${this.state.listId}_Item_${index}`
+  // }
 
-  private getListItemId(index: number) {
-    return `${this.state.listId}_Item_${index}`
-  }
+  private renderItem = (key: T) => {
+    const { items, selectedKey } = this.props
+    const index = items.findIndex(item => item.key === key)
+    const item = items[index]
 
-  private renderItem(item: ISegmentedItem<T>, index: number) {
     return (
       <SegmentedItem
-        id={this.getListItemId(index)}
-        parentId={this.state.listId}
+        // id={this.getListItemId(index)}
+        // parentId={this.state.listId}
         key={item.key}
         title={item.title}
         description={item.description}
-        isSelected={item.key === this.props.selectedKey}
-        value={item.key}
-        onDoubleClick={this.onItemDoubleClick}
-        onSelected={this.onItemSelected}
+        isSelected={item.key === selectedKey}
+        // value={item.key}
+        // onDoubleClick={this.onItemDoubleClick}
+        // onSelected={this.onItemSelected}
       />
     )
   }
 
-  private onFieldsetRef = (ref: HTMLFieldSetElement | null) => {
-    this.formRef = ref ? ref.form : null
-  }
-
   public render() {
-    if (this.props.items.length === 0) {
+    const { items, label, selectedKey, onSelectionChanged } = this.props
+    if (items.length === 0) {
       return null
     }
 
-    const label = this.props.label ? (
-      <legend>{this.props.label}</legend>
-    ) : undefined
+    const labelId = `${this.state.listId}-header-label`
 
     // Using a fieldset with a legend seems to be the way to go here since
     // we can't use a label to point to a list (https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Content_categories#Form_labelable).
     // See http://stackoverflow.com/a/13273907/2114
     return (
-      <fieldset
-        className="vertical-segmented-control"
-        ref={this.onFieldsetRef}
-        id={this.state.listId}
-        role="radiogroup"
-      >
-        {label}
-        {this.props.items.map((item, index) => this.renderItem(item, index))}
-      </fieldset>
+      <div className="vertical-segmented-control">
+        {label && (
+          <p className="vertical-segmented-control-header-label" id={labelId}>
+            {label}
+          </p>
+        )}
+        <RadioGroup<T>
+          ariaLabelledBy={labelId}
+          className="vertical-segmented-control-radio-group"
+          selectedKey={selectedKey}
+          radioButtonKeys={items.map(item => item.key)}
+          onSelectionChanged={onSelectionChanged}
+          renderRadioButtonLabelContents={this.renderItem}
+        />
+      </div>
+
+      // <fieldset
+      //   className="vertical-segmented-control"
+      //   ref={this.onFieldsetRef}
+      //   id={this.state.listId}
+      //   role="radiogroup"
+      // >
+      //   {label}
+      //   {this.props.items.map((item, index) => this.renderItem(item, index))}
+      // </fieldset>
     )
   }
 }

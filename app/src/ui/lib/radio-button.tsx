@@ -39,7 +39,9 @@ interface IRadioButtonState {
   readonly inputId: string
 }
 
-export class RadioButton<T extends string> extends React.Component<
+type Key = string | number
+
+export class RadioButton<T extends Key> extends React.Component<
   IRadioButtonProps<T>,
   IRadioButtonState
 > {
