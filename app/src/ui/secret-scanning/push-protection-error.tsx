@@ -29,6 +29,7 @@ export interface ISecretScanResult {
 interface IPushProtectionErrorDialogProps {
   /** The secrets that were detected on push */
   readonly secrets: ReadonlyArray<ISecretScanResult>
+  readonly onRemediate: (secrets: ReadonlyArray<ISecretScanResult>) => void
   readonly onDismissed: () => void
 }
 
@@ -48,7 +49,7 @@ export class PushProtectionErrorDialog extends React.Component<
             : 'Push blocked: secret detected'
         }
         onDismissed={this.props.onDismissed}
-        onSubmit={this.props.onDismissed}
+        onSubmit={this.onRemediate}
         type="error"
         role="alertdialog"
         ariaDescribedBy="push-protection-error-dialog-description"
@@ -81,10 +82,14 @@ export class PushProtectionErrorDialog extends React.Component<
           </div>
         </DialogContent>
         <DialogFooter>
-          <OkCancelButtonGroup cancelButtonVisible={false} />
+          <OkCancelButtonGroup okButtonText="Remediate" />
         </DialogFooter>
       </Dialog>
     )
+  }
+
+  private onRemediate = () => {
+    this.props.onRemediate(this.props.secrets)
   }
 
   private renderSecretDescription = (secret: ISecretScanResult) => {

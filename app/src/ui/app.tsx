@@ -186,7 +186,10 @@ import { showTestUI } from './lib/test-ui-components/test-ui-components'
 import { ConfirmCommitFilteredChanges } from './changes/confirm-commit-filtered-changes-dialog'
 import { AboutTestDialog } from './about/about-test-dialog'
 import { enableMultipleEnterpriseAccounts } from '../lib/feature-flag'
-import { PushProtectionErrorDialog } from './secret-scanning/push-protection-error'
+import {
+  ISecretScanResult,
+  PushProtectionErrorDialog,
+} from './secret-scanning/push-protection-error'
 import { GenerateCommitMessageOverrideWarning } from './generate-commit-message/generate-commit-message-override-warning'
 import { GenerateCommitMessageDisclaimer } from './generate-commit-message/generate-commit-message-disclaimer'
 
@@ -2502,6 +2505,7 @@ export class App extends React.Component<IAppProps, IAppState> {
           <PushProtectionErrorDialog
             key="push-protection-error"
             secrets={popup.secrets}
+            onRemediate={this.onRemediateDetectedSecrets}
             onDismissed={onPopupDismissedFn}
           />
         )
@@ -2530,6 +2534,12 @@ export class App extends React.Component<IAppProps, IAppState> {
       default:
         return assertNever(popup, `Unknown popup type: ${popup}`)
     }
+  }
+
+  private onRemediateDetectedSecrets = (
+    secrets: ReadonlyArray<ISecretScanResult>
+  ) => {
+    this.props.dispatcher.remediateDetectedSecrets(secrets)
   }
 
   private setConfirmCommitFilteredChanges = (value: boolean) => {
