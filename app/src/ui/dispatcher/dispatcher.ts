@@ -4008,4 +4008,105 @@ export class Dispatcher {
       includedChangesInCommitFilter
     )
   }
+
+  public async remediateDetectedSecrets(
+    secrets: ReadonlyArray<ISecretScanResult>
+  ) {
+    // TODO: THis should check for uncommitted changes and show a warning if there are
+    // any. See "reorderCommits" for an example of how to do this.
+
+    // Also a good place to track some stats
+
+    const appState = this.appStore.getState()
+    const repository = appState.selectedState?.repository
+    if (!(repository instanceof Repository)) {
+      log.error(
+        '[_remediateDetectedSecrets] - No repository selected. Unable to remediate.'
+      )
+      return
+    }
+
+    // Get all the commit shas that are affected by the secrets
+    const commitSHAs = secrets.reduce((acc: Array<string>, secret) => {
+      secret.locations.forEach(location => {
+        if (acc.includes(location.commitSha)) {
+          return
+        }
+        acc.push(location.commitSha)
+      })
+      return acc
+    }, [])
+
+    // Oldest first.
+    const sortedCommitShas = this.appStore.orderShasByHistory(
+      repository,
+      commitSHAs
+    )
+
+    const { commitLookup, branchesState } =
+      this.repositoryStateManager.get(repository)
+    const commits: Commit[] = []
+    sortedCommitShas.forEach(sha => {
+      if (commitLookup.get(sha)) {
+        commits.push(commitLookup.get(sha)!)
+      }
+    })
+
+    const { tip } = branchesState
+
+    if (tip.kind !== TipState.Valid) {
+      log.info(
+        `[remediateSecrets] - invalid tip state - could not perform secret remediation.`
+      )
+      return
+    }
+
+    const { branch } = tip
+    const currentTip = branch.tip.sha
+
+    this.appStore._initializeMultiCommitOperation(
+      repository,
+      {
+        kind: MultiCommitOperationKind.RemediateSecret,
+        secrets,
+        lastRetainedCommitRef: null,
+        commits,
+        currentTip,
+      },
+      branch,
+      commits,
+      currentTip
+    )
+
+    this.showPopup({
+      type: PopupType.MultiCommitOperation,
+      repository,
+    })
+
+    // Maybe : this.appStore._setMultiCommitOperationUndoState(repository, tip)
+
+    // Maybe warning about force push
+
+    // maybe this.logHowToRevertMultiCommitOperation( MultiCommitOperationKind.Reorder,tip)
+
+    const earliestCommit = commits.at(0)
+    const lastRetainedCommitRef = earliestCommit
+      ? this.appStore._getCommitSHABeforeSHA(repository, earliestCommit.sha)
+      : null
+
+    const result = await this.appStore._remediateDetectedSecrets(
+      repository,
+      commits,
+      lastRetainedCommitRef
+    )
+
+    return this.processMultiCommitOperationRebaseResult(
+      MultiCommitOperationKind.RemediateSecret,
+      repository,
+      result,
+      commits.length,
+      tip.branch.name,
+      `${MultiCommitOperationKind.RemediateSecret.toLowerCase()} commit`
+    )
+  }
 }

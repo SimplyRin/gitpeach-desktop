@@ -346,6 +346,7 @@ import {
   migratedCustomIntegration,
 } from '../custom-integration'
 import { updateStore } from '../../ui/lib/update-store'
+import { interactiveAmend } from '../git/interactive-amend'
 
 const LastSelectedRepositoryIDKey = 'last-selected-repository-id'
 
@@ -7193,7 +7194,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
    * changed. Thus, assuming 1 is the first commit made by the user and 5 is the
    * last. We want the order to be, 1, 3, 5.
    */
-  private orderShasByHistory(
+  public orderShasByHistory(
     repository: Repository,
     commits: ReadonlyArray<string>
   ) {
@@ -7204,6 +7205,43 @@ export class AppStore extends TypedBaseStore<IAppState> {
     return commits.toSorted((a, b) =>
       compare(commitIndexBySha.get(b), commitIndexBySha.get(a))
     )
+  }
+
+  public _getCommitSHABeforeSHA(
+    repository: Repository,
+    sha: string
+  ): string | null {
+    const { compareState } = this.repositoryStateCache.get(repository)
+    const { commitSHAs } = compareState
+    const commitIndexBySha = new Map(commitSHAs.map((sha, i) => [sha, i]))
+    const commitIndex = commitIndexBySha.get(sha)
+    if (commitIndex === undefined || commitIndex === 0) {
+      return null
+    }
+    // We want the commit before the current commit and commitShas are in newest to oldest order
+    // So we need to get the commit at index + 1
+    const previousCommitSha = commitSHAs[commitIndex + 1]
+    return previousCommitSha ?? null
+  }
+
+  public async _remediateDetectedSecrets(
+    repository: Repository,
+    sortedCommits: ReadonlyArray<Commit>,
+    lastRetainedCommitRef: string | null
+  ) {
+    const progressCallback =
+      this.getMultiCommitOperationProgressCallBack(repository)
+    const gitStore = this.gitStoreCache.get(repository)
+    const result = await gitStore.performFailableOperation(() =>
+      interactiveAmend(
+        repository,
+        sortedCommits.map(c => c.sha),
+        lastRetainedCommitRef,
+        progressCallback
+      )
+    )
+
+    return result || RebaseResult.Error
   }
 
   /** This shouldn't be called directly. See `Dispatcher`. */
