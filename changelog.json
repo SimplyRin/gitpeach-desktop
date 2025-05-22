@@ -1,5 +1,6 @@
 {
   "releases": {
+    "3.4.21-test1": ["[New] Automated test release"],
     "3.4.20-beta3": [
       "[Fixed] Prevent network share traversal with renamed UNC paths on Windows"
     ],
