@@ -315,8 +315,8 @@ export class SideBySideDiffRow extends React.Component<
           >
             <div role="cell">
               {this.renderHunkHeaderGutter(row.hunkIndex, row.expansionType)}
+              {this.renderContentFromString(row.content)}
             </div>
-            <div role="cell">{this.renderContentFromString(row.content)}</div>
           </div>
         )
       }
