@@ -271,6 +271,38 @@ export class SideBySideDiffRow extends React.Component<
     const beforeClasses = classNames('before', ...beforeClassNames)
     const afterClasses = classNames('after', ...afterClassNames)
     switch (row.type) {
+      case DiffRowType.ColumnHeader: {
+        const rowClasses = classNames('sr-only')
+        if (!showSideBySideDiff) {
+          return (
+            <div className={rowClasses} role="row">
+              <div role="columnheader">
+                Checkbox for group of changes in commit
+              </div>
+              <div role="columnheader">
+                Checkbox including a single change in commit
+              </div>
+              <div role="columnheader">Old line number</div>
+              <div role="columnheader">New line number</div>
+              <div role="columnheader">Line content</div>
+            </div>
+          )
+        }
+        return (
+          <div className={rowClasses} role="row">
+            <div role="columnheader">
+              Checkbox for group of changes in commit
+            </div>
+            <div role="columnheader">
+              Checkbox including a single change in commit
+            </div>
+            <div role="columnheader">Old line number</div>
+            <div role="columnheader">New line number</div>
+            <div role="columnheader">Old Line content</div>
+            <div role="columnheader">New Line content</div>
+          </div>
+        )
+      }
       case DiffRowType.Hunk: {
         const rowClasses = classNames('hunk-info', baseRowClasses, {
           'expandable-both': row.expansionType === DiffHunkExpansionType.Both,

@@ -1788,6 +1788,10 @@ const getDiffRows = memoize(function (
   enableDiffExpansion: boolean
 ): ReadonlyArray<SimplifiedDiffRow> {
   const outputRows = new Array<SimplifiedDiffRow>()
+  
+  outputRows.push({
+    type: DiffRowType.ColumnHeader,
+  })
 
   diff.hunks.forEach((hunk, index) => {
     for (const row of getDiffRowsFromHunk(
@@ -2115,6 +2119,10 @@ function* enumerateColumnContents(
   } else if (row.type === DiffRowType.Modified) {
     yield { type: DiffColumn.Before, content: row.beforeData.content }
     yield { type: DiffColumn.After, content: row.afterData.content }
+  } else if (row.type === DiffRowType.ColumnHeader) {
+    // Column headers don't have any content to search for.
+    // They are used to present the column names in side-by-side diffs to screen readers
+    return
   } else {
     assertNever(row, `Unknown row type ${row}`)
   }

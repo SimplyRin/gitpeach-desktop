@@ -26,6 +26,7 @@ export enum DiffRowType {
   Added = 'Added',
   Deleted = 'Deleted',
   Modified = 'Modified',
+  ColumnHeader = 'ColumnHeader',
 }
 
 export enum DiffColumn {
@@ -190,12 +191,21 @@ interface IDiffRowHunk {
   readonly hunkIndex: number
 }
 
+/**
+ * IDiffRowColumnHeader represents a row that contains the header
+ * of a the entire diff grid
+ */
+interface IDiffRowColumnHeader {
+  readonly type: DiffRowType.ColumnHeader
+}
+
 export type DiffRow =
   | IDiffRowAdded
   | IDiffRowDeleted
   | IDiffRowModified
   | IDiffRowContext
   | IDiffRowHunk
+  | IDiffRowColumnHeader
 
 export type SimplifiedDiffRow =
   | IDiffRowAdded<SimplifiedDiffRowData>
@@ -203,6 +213,7 @@ export type SimplifiedDiffRow =
   | IDiffRowModified<SimplifiedDiffRowData>
   | IDiffRowContext
   | IDiffRowHunk
+  | IDiffRowColumnHeader
 
 export type ChangedFile = WorkingDirectoryFileChange | CommittedFileChange
 
