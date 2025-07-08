@@ -1,6 +1,6 @@
 {
   "releases": {
-    "3.5.1-beta1": [
+    "3.5.2-beta1": [
       "[Fixed] Use all changes to generate a commit message when amending commits - #20664",
       "[Fixed] Fix CmdOrCtrl+Enter in squash dialog - #20716",
       "[Fixed] Keyboard selection in the repository list now persists when the list of repositories update  - #20672",
