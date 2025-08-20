@@ -216,26 +216,66 @@ async function generateChecksums(files: Array<string>) {
 async function packageLinux() {
   const helperPath = path.join(getDistPath(), 'chrome-sandbox')
   const exists = await pathExists(helperPath)
-
   if (exists) {
     console.log('Updating file mode for chrome-sandbox…')
     await chmod(helperPath, 0o4755)
   }
+
+  // Ensure the dist directory structure is correct
+  const distPath = getDistPath()
+  console.log(`Using dist path: ${distPath}`)
+
+  if (!(await pathExists(distPath))) {
+    throw new Error(
+      `Distribution path ${distPath} does not exist. Run build first.`
+    )
+  }
+
   try {
-    const files = await packageElectronBuilder()
-    const debianPackage = await packageDebian()
-    const redhatPackage = await packageRedhat()
+    console.log('Building all Linux packages with electron-builder...')
+    const allPackages = await packageElectronBuilder()
 
-    const installers = [...files, debianPackage, redhatPackage]
+    // electron-builder now handles deb, and rpm packages
+    // so we don't need separate packageDebian() and packageRedhat() calls
 
-    console.log(`Installers created:`)
-    for (const installer of installers) {
-      console.log(` - ${installer}`)
+    console.log('Generating checksums...')
+    await generateChecksums(allPackages)
+
+    return allPackages
+  } catch (error) {
+    console.error('Linux packaging failed:', error)
+
+    // Fallback: try individual packaging if electron-builder fails
+    try {
+      console.log('Attempting fallback packaging...')
+      const files: string[] = []
+
+      // Try building individual packages
+      console.log('Building Debian package...')
+      try {
+        const debianPackage = await packageDebian()
+        files.push(debianPackage)
+      } catch (debError) {
+        console.log('Debian packaging failed:', debError)
+      }
+
+      console.log('Building RedHat package...')
+      try {
+        const redhatPackage = await packageRedhat()
+        files.push(redhatPackage)
+      } catch (rpmError) {
+        console.log('RedHat packaging failed:', rpmError)
+      }
+
+      if (files.length > 0) {
+        console.log('Generating checksums for fallback packages...')
+        await generateChecksums(files)
+        return files
+      }
+    } catch (fallbackError) {
+      console.error('Fallback packaging also failed:', fallbackError)
     }
 
-    generateChecksums(installers)
-  } catch (err) {
-    console.error('A problem occurred with the packaging step', err)
-    process.exit(1)
+    throw error
   }
 }

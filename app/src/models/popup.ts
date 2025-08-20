@@ -96,6 +96,11 @@ export enum PopupType {
   UnknownAuthors = 'UnknownAuthors',
   TestIcons = 'TestIcons',
   ConfirmRestart = 'ConfirmRestart',
+  GenerateCommitMessageOverrideWarning = 'GenerateCommitMessageOverrideWarning',
+  GenerateCommitMessageDisclaimer = 'GenerateCommitMessageDisclaimer',
+  PushProtectionError = 'PushProtectionError',
+  ConfirmCommitFilteredChanges = 'ConfirmCommitFilteredChanges',
+  TestAbout = 'TestAbout',
 }
 
 interface IBasePopup {
@@ -425,5 +430,27 @@ export type PopupDetail =
       type: PopupType.TestIcons
     }
   | { type: PopupType.ConfirmRestart }
+  | {
+      type: PopupType.GenerateCommitMessageOverrideWarning
+      repository: Repository
+      filesSelected: ReadonlyArray<WorkingDirectoryFileChange>
+    }
+  | {
+      type: PopupType.GenerateCommitMessageDisclaimer
+      repository: Repository
+      filesSelected: ReadonlyArray<WorkingDirectoryFileChange>
+    }
+  | {
+      type: PopupType.PushProtectionError
+      secrets: ReadonlyArray<any>
+    }
+  | {
+      type: PopupType.ConfirmCommitFilteredChanges
+      onCommitAnyway: () => void
+      showFilesToBeCommitted: () => void
+    }
+  | {
+      type: PopupType.TestAbout
+    }
 
 export type Popup = IBasePopup & PopupDetail
