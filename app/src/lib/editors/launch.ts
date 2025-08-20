@@ -80,9 +80,7 @@ export async function launchExternalEditor(
   }
 
   try {
-    if (editor.usesShell) {
-      spawn(`"${editorPath}"`, [`"${fullPath}"`], { ...opts, shell: true })
-    } else if (__DARWIN__) {
+    if (__DARWIN__) {
       // In macOS we can use `open`, which will open the right executable file
       // for us, we only need the path to the editor .app folder.
       spawn('open', ['-a', editorPath, fullPath], opts)
