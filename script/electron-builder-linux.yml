@@ -11,5 +11,34 @@ linux:
     # see https://github.com/shiftkey/desktop/issues/72 for more details
     - x-scheme-handler/x-github-desktop-dev-auth
   target:
-    - AppImage
-  maintainer: 'Brendan Forster<github@brendanforster.com>'
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+    - target: rpm
+      arch:
+        - x64
+  maintainer: 'GitHub Desktop Linux <noreply@github.com>'
+  executableName: 'github-desktop'
+
+deb:
+  depends:
+    - git
+    - libsecret-1-0
+    - libxss1
+    - libnss3
+    - libasound2
+  afterInstall: 'script/linux-after-install.sh'
+  afterRemove: 'script/linux-after-remove.sh'
+
+rpm:
+  depends:
+    - git
+    - libsecret
+    - libXScrnSaver
+    - nss
+    - alsa-lib
+  afterInstall: 'script/linux-after-install.sh'
+  afterRemove: 'script/linux-after-remove.sh'

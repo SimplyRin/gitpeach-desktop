@@ -216,26 +216,39 @@ async function generateChecksums(files: Array<string>) {
 async function packageLinux() {
   const helperPath = path.join(getDistPath(), 'chrome-sandbox')
   const exists = await pathExists(helperPath)
-
   if (exists) {
     console.log('Updating file mode for chrome-sandbox…')
     await chmod(helperPath, 0o4755)
   }
+
+  // Ensure the dist directory structure is correct
+  const distPath = getDistPath()
+  console.log(`Using dist path: ${distPath}`)
+
+  if (!(await pathExists(distPath))) {
+    throw new Error(
+      `Distribution path ${distPath} does not exist. Run build first.`
+    )
+  }
+
   try {
+    console.log('Building AppImage...')
     const files = await packageElectronBuilder()
+
+    console.log('Building Debian package...')
     const debianPackage = await packageDebian()
+
+    console.log('Building RedHat package...')
     const redhatPackage = await packageRedhat()
 
     const installers = [...files, debianPackage, redhatPackage]
 
-    console.log(`Installers created:`)
-    for (const installer of installers) {
-      console.log(` - ${installer}`)
-    }
+    console.log('Generating checksums...')
+    await generateChecksums(installers)
 
-    generateChecksums(installers)
-  } catch (err) {
-    console.error('A problem occurred with the packaging step', err)
-    process.exit(1)
+    return installers
+  } catch (error) {
+    console.error('Linux packaging failed:', error)
+    throw error
   }
 }

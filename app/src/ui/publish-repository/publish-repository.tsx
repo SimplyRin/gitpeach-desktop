@@ -149,16 +149,17 @@ export class PublishRepository extends React.Component<
   public render() {
     return (
       <DialogContent>
-        {enableMultipleEnterpriseAccounts() && this.props.accounts.length > 1 && (
-          <Row>
-            <AccountPicker
-              accounts={this.props.accounts}
-              openButtonClassName="dialog-preferred-focus"
-              selectedAccount={this.props.account}
-              onSelectedAccountChanged={this.props.onSelectedAccountChanged}
-            />
-          </Row>
-        )}
+        {enableMultipleEnterpriseAccounts() &&
+          this.props.accounts.length > 1 && (
+            <Row>
+              <AccountPicker
+                accounts={this.props.accounts}
+                openButtonClassName="dialog-preferred-focus"
+                selectedAccount={this.props.account}
+                onSelectedAccountChanged={this.props.onSelectedAccountChanged}
+              />
+            </Row>
+          )}
 
         <Row>
           <TextBox

@@ -88,7 +88,7 @@ const TestMenuEvents = [
   'test-about-dialog',
 ] as const
 
-export type TestMenuEvent = typeof TestMenuEvents[number]
+export type TestMenuEvent = (typeof TestMenuEvents)[number]
 
 export function isTestMenuEvent(value: any): value is TestMenuEvent {
   return TestMenuEvents.includes(value)

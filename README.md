@@ -1,10 +1,45 @@
 # [GitHub Desktop](https://desktop.github.com) - The Linux Fork
 
 [![CI](https://github.com/shiftkey/desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/shiftkey/desktop/actions/workflows/ci.yml)
+[![Build Linux Package](https://github.com/SimplyRin/desktop/actions/workflows/build-linux.yml/badge.svg)](https://github.com/SimplyRin/desktop/actions/workflows/build-linux.yml)
 
 [GitHub Desktop](https://desktop.github.com/) is an open-source [Electron](https://www.electronjs.org/)-based
 GitHub app. It is written in [TypeScript](https://www.typescriptlang.org) and
 uses [React](https://reactjs.org/).
+
+## Linux Build Information
+
+This fork is specifically configured for Linux distributions and provides automated builds via GitHub Actions.
+
+### Available Packages
+
+- **AppImage** (`.AppImage`) - Universal Linux package
+- **Debian/Ubuntu** (`.deb`) - For Debian-based distributions  
+- **Red Hat/Fedora** (`.rpm`) - For Red Hat-based distributions
+
+### Installation
+
+#### Debian/Ubuntu (.deb)
+```bash
+# Download and install the .deb package
+wget https://github.com/SimplyRin/desktop/releases/latest/download/GitHubDesktop-linux-amd64-*.deb
+sudo apt install ./GitHubDesktop-linux-amd64-*.deb
+```
+
+#### Red Hat/Fedora (.rpm)
+```bash
+# Download and install the .rpm package  
+wget https://github.com/SimplyRin/desktop/releases/latest/download/GitHubDesktop-linux-x86_64-*.rpm
+sudo rpm -i GitHubDesktop-linux-x86_64-*.rpm
+```
+
+#### AppImage (Universal)
+```bash
+# Download and run AppImage
+wget https://github.com/SimplyRin/desktop/releases/latest/download/GitHubDesktop-linux-x86_64-*.AppImage
+chmod +x GitHubDesktop-linux-x86_64-*.AppImage
+./GitHubDesktop-linux-x86_64-*.AppImage
+```
 
 <picture>
   <source

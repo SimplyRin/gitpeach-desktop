@@ -25,7 +25,8 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
   const distPath = getDistPath()
   const distRoot = getDistRoot()
 
-  const electronBuilder = path.resolve(
+  // Try multiple approaches to find electron-builder
+  let electronBuilder = path.resolve(
     __dirname,
     '..',
     'node_modules',
@@ -33,21 +34,72 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     'electron-builder'
   )
 
-  const configPath = path.resolve(__dirname, 'electron-builder-linux.yml')
+  // Check if the binary exists, if not try alternatives
+  if (!require('fs').existsSync(electronBuilder)) {
+    console.log(
+      'electron-builder binary not found at expected path, trying alternatives...'
+    )
 
-  const args = [
-    'build',
-    '--prepackaged',
-    distPath,
-    getArchitecture(),
-    '--config',
-    configPath,
-  ]
+    // Try npx approach
+    electronBuilder = 'npx'
 
-  const { error } = cp.spawnSync(electronBuilder, args, { stdio: 'inherit' })
+    const configPath = path.resolve(__dirname, 'electron-builder-linux.yml')
 
-  if (error != null) {
-    return Promise.reject(error)
+    const args = [
+      'electron-builder',
+      'build',
+      '--prepackaged',
+      distPath,
+      getArchitecture(),
+      '--config',
+      configPath,
+    ]
+
+    const { error } = cp.spawnSync(electronBuilder, args, { stdio: 'inherit' })
+
+    if (error != null) {
+      console.log(
+        'npx electron-builder failed, trying direct electron-builder...'
+      )
+
+      // Final fallback: try running electron-builder directly
+      const directArgs = [
+        'build',
+        '--prepackaged',
+        distPath,
+        getArchitecture(),
+        '--config',
+        configPath,
+      ]
+
+      const { error: directError } = cp.spawnSync(
+        'electron-builder',
+        directArgs,
+        { stdio: 'inherit' }
+      )
+
+      if (directError != null) {
+        return Promise.reject(directError)
+      }
+    }
+  } else {
+    // Original approach when binary exists
+    const configPath = path.resolve(__dirname, 'electron-builder-linux.yml')
+
+    const args = [
+      'build',
+      '--prepackaged',
+      distPath,
+      getArchitecture(),
+      '--config',
+      configPath,
+    ]
+
+    const { error } = cp.spawnSync(electronBuilder, args, { stdio: 'inherit' })
+
+    if (error != null) {
+      return Promise.reject(error)
+    }
   }
 
   const appImageInstaller = `${distRoot}/GitHubDesktop-linux-*.AppImage`
