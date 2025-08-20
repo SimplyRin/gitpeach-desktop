@@ -283,7 +283,7 @@ async function handleCommandLineArguments(argv: string[]) {
     // so we should filter out the program name as well as any parameters that
     // look like arguments to Electron
     const argsWithoutParameters = args.filter(
-      a => !a.endsWith('github-desktop') && !a.startsWith('--')
+      (a: string) => !a.endsWith('github-desktop') && !a.startsWith('--')
     )
     if (argsWithoutParameters.length > 0) {
       handleAppURL(argsWithoutParameters[0])

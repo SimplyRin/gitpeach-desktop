@@ -1,4 +1,6 @@
 artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
+directories:
+  output: 'dist'
 linux:
   category: 'GNOME;GTK;Development'
   packageCategory: 'GNOME;GTK;Development'
@@ -11,5 +13,49 @@ linux:
     # see https://github.com/shiftkey/desktop/issues/72 for more details
     - x-scheme-handler/x-github-desktop-dev-auth
   target:
-    - AppImage
-  maintainer: 'Brendan Forster<github@brendanforster.com>'
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+    - target: rpm
+      arch:
+        - x64
+        - arm64
+  maintainer: 'GitHub Desktop Linux <noreply@github.com>'
+  executableName: 'github-desktop'
+
+appImage:
+  # systemIntegration is deprecated in newer versions
+  artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
+
+deb:
+  depends:
+    - git
+    - libsecret-1-0
+    - libxss1
+    - libnss3
+    - libasound2
+    - zlib1g
+    - libbz2-1.0
+    - liblzma5
+  afterInstall: 'script/linux-after-install.sh'
+  afterRemove: 'script/linux-after-remove.sh'
+  packageCategory: 'GNOME;GTK;Development'
+
+rpm:
+  depends:
+    - git
+    - libsecret
+    - libXScrnSaver
+    - nss
+    - alsa-lib
+    - zlib
+    - bzip2-libs
+    - xz-libs
+  afterInstall: 'script/linux-after-install.sh'
+  afterRemove: 'script/linux-after-remove.sh'
+  packageCategory: 'GNOME;GTK;Development'
