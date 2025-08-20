@@ -1,7 +1,6 @@
-import { spawn, ChildProcess } from 'child_process'
+import { ChildProcess } from 'child_process'
 import { assertNever } from '../fatal-error'
 import { parseEnumValue } from '../enum'
-import { pathExists } from '../../ui/lib/path-exists'
 import { FoundShell } from './shared'
 import {
   expandTargetPathArgument,
@@ -9,6 +8,7 @@ import {
   parseCustomIntegrationArguments,
   spawnCustomIntegration,
 } from '../custom-integration'
+import { pathExists, spawn } from '../helpers/linux'
 
 export enum Shell {
   Gnome = 'GNOME Terminal',
@@ -27,7 +27,7 @@ export enum Shell {
   Kitty = 'Kitty',
   LXTerminal = 'LXDE Terminal',
   Warp = 'Warp',
-  Ghostty = 'Ghostty',
+  BlackBox = 'Black Box',
 }
 
 export const Default = Shell.Gnome
@@ -74,8 +74,8 @@ function getShellPath(shell: Shell): Promise<string | null> {
       return getPathIfAvailable('/usr/bin/lxterminal')
     case Shell.Warp:
       return getPathIfAvailable('/usr/bin/warp-terminal')
-    case Shell.Ghostty:
-      return getPathIfAvailable('/usr/bin/ghostty')
+    case Shell.BlackBox:
+      return getPathIfAvailable('/usr/bin/blackbox-terminal')
     default:
       return assertNever(shell, `Unknown shell: ${shell}`)
   }
@@ -101,7 +101,7 @@ export async function getAvailableShells(): Promise<
     kittyPath,
     lxterminalPath,
     warpPath,
-    ghosttyPath,
+    blackBoxPath,
   ] = await Promise.all([
     getShellPath(Shell.Gnome),
     getShellPath(Shell.GnomeConsole),
@@ -119,7 +119,7 @@ export async function getAvailableShells(): Promise<
     getShellPath(Shell.Kitty),
     getShellPath(Shell.LXTerminal),
     getShellPath(Shell.Warp),
-    getShellPath(Shell.Ghostty),
+    getShellPath(Shell.BlackBox),
   ])
 
   const shells: Array<FoundShell<Shell>> = []
@@ -187,8 +187,8 @@ export async function getAvailableShells(): Promise<
     shells.push({ shell: Shell.Warp, path: warpPath })
   }
 
-  if (ghosttyPath) {
-    shells.push({ shell: Shell.Ghostty, path: ghosttyPath })
+  if (blackBoxPath) {
+    shells.push({ shell: Shell.BlackBox, path: blackBoxPath })
   }
 
   return shells
@@ -207,6 +207,7 @@ export function launch(
     case Shell.Terminator:
     case Shell.XFCE:
     case Shell.Alacritty:
+    case Shell.BlackBox:
       return spawn(foundShell.path, ['--working-directory', path])
     case Shell.Urxvt:
       return spawn(foundShell.path, ['-cd', path])
@@ -223,10 +224,11 @@ export function launch(
     case Shell.Kitty:
       return spawn(foundShell.path, ['--single-instance', '--directory', path])
     case Shell.LXTerminal:
-    case Shell.Ghostty:
       return spawn(foundShell.path, ['--working-directory=' + path])
     case Shell.Warp:
       return spawn(foundShell.path, [], { cwd: path })
+    case Shell.BlackBox:
+      return spawn(foundShell.path, ['--working-directory', path])
     default:
       return assertNever(shell, `Unknown shell: ${shell}`)
   }

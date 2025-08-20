@@ -4,7 +4,14 @@ on:
   push:
     branches:
       - development
+      - linux
+      - 'linux-release-*'
+    tags:
+      - 'release-*.*.*-linux*'
   pull_request:
+    branches:
+      - linux
+      - 'linux-release-*'
   workflow_call:
     inputs:
       repository:
