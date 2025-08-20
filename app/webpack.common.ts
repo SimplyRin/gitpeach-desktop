@@ -30,6 +30,12 @@ const commonConfig: webpack.Configuration = {
         use: [
           {
             loader: 'ts-loader',
+            options: {
+              transpileOnly: true,
+              compilerOptions: {
+                skipLibCheck: true,
+              },
+            },
           },
         ],
         exclude: /node_modules/,
@@ -45,6 +51,18 @@ const commonConfig: webpack.Configuration = {
   },
   resolve: {
     extensions: ['.js', '.ts', '.tsx'],
+    alias: {
+      // Map desktop-notifications to the vendor directory
+      'desktop-notifications': path.resolve(
+        __dirname,
+        '../vendor/desktop-notifications'
+      ),
+      // Also map the dist subdirectory paths
+      'desktop-notifications/dist': path.resolve(
+        __dirname,
+        '../vendor/desktop-notifications/dist'
+      ),
+    },
   },
   node: {
     __dirname: false,

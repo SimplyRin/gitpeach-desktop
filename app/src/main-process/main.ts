@@ -108,9 +108,9 @@ const protocolLauncherArg = '--protocol-launcher'
 
 const possibleProtocols = new Set(['x-github-client'])
 if (__DEV_SECRETS__) {
-  possibleProtocols.add('x-github-desktop-dev-auth')
+  possibleProtocols.add('x-gitpeach-desktop-dev-auth')
 } else {
-  possibleProtocols.add('x-github-desktop-auth')
+  possibleProtocols.add('x-gitpeach-desktop-auth')
 }
 // Also support Desktop Classic's protocols.
 if (__DARWIN__) {
@@ -161,8 +161,9 @@ if (!handlingSquirrelEvent) {
 initializeDesktopNotifications()
 
 function handleAppURL(url: string) {
-  log.info('Processing protocol url')
+  log.info(`Processing protocol url: ${url}`)
   const action = parseAppURL(url)
+  log.info(`Parsed action: ${JSON.stringify(action)}`)
   onDidLoad(window => {
     // This manual focus call _shouldn't_ be necessary, but is for Chrome on
     // macOS. See https://github.com/desktop/desktop/issues/973.
@@ -282,14 +283,37 @@ async function handleCommandLineArguments(argv: string[]) {
     // we expect this call to have several parameters before the URL we want,
     // so we should filter out the program name as well as any parameters that
     // look like arguments to Electron
-    const argsWithoutParameters = args.filter(
-      a => !a.endsWith('github-desktop') && !a.startsWith('--')
-    )
-    if (argsWithoutParameters.length > 0) {
-      handleAppURL(argsWithoutParameters[0])
+    log.info(`Linux command line args: ${JSON.stringify(argv)}`)
+    log.info(`Parsed args: ${JSON.stringify(args)}`)
+    
+    // Look for protocol URLs in all parsed arguments, including named ones
+    const prefixes = Array.from(possibleProtocols, p => `${p}://`)
+    let foundProtocolUrl = null
+    
+    // Check in positional arguments first
+    for (const arg of args._) {
+      if (typeof arg === 'string' && prefixes.some(p => arg.startsWith(p))) {
+        foundProtocolUrl = arg
+        break
+      }
     }
-  } else if (args.length > 1) {
-    handleAppURL(args[1])
+    
+    // If not found in positional args, check in named arguments
+    if (!foundProtocolUrl) {
+      for (const [key, value] of Object.entries(args)) {
+        if (key !== '_' && typeof value === 'string' && prefixes.some(p => value.startsWith(p))) {
+          foundProtocolUrl = value
+          break
+        }
+      }
+    }
+    
+    log.info(`Found protocol URL: ${foundProtocolUrl}`)
+    if (foundProtocolUrl) {
+      handleAppURL(foundProtocolUrl)
+    }
+  } else if (args._.length > 1) {
+    handleAppURL(args._[1])
   }
 
   if (typeof args['cli-open'] === 'string') {

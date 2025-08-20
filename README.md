@@ -1,10 +1,61 @@
 # [GitHub Desktop](https://desktop.github.com) - The Linux Fork
 
 [![CI](https://github.com/shiftkey/desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/shiftkey/desktop/actions/workflows/ci.yml)
+[![Build Linux Package](https://github.com/SimplyRin/desktop/actions/workflows/build-linux.yml/badge.svg)](https://github.com/SimplyRin/desktop/actions/workflows/build-linux.yml)
 
 [GitHub Desktop](https://desktop.github.com/) is an open-source [Electron](https://www.electronjs.org/)-based
 GitHub app. It is written in [TypeScript](https://www.typescriptlang.org) and
 uses [React](https://reactjs.org/).
+
+## Linux Build Information
+
+This fork is specifically configured for Linux distributions and provides automated builds via GitHub Actions.
+
+### Available Packages
+
+- **Debian/Ubuntu** (`.deb`) - For Debian-based distributions  
+- **Red Hat/Fedora** (`.rpm`) - For Red Hat-based distributions
+
+### Installation
+
+#### Debian/Ubuntu (.deb)
+```bash
+# Download and install the .deb package
+wget https://github.com/SimplyRin/desktop/releases/latest/download/GitHubDesktop-linux-amd64-*.deb
+sudo apt install ./GitHubDesktop-linux-amd64-*.deb
+```
+
+#### Red Hat/Fedora (.rpm)
+```bash
+# Download and install the .rpm package  
+wget https://github.com/SimplyRin/desktop/releases/latest/download/GitHubDesktop-linux-x86_64-*.rpm
+sudo rpm -i GitHubDesktop-linux-x86_64-*.rpm
+```
+
+### Automatic Updates from GitHub Releases
+
+This fork supports automatic updates from GitHub Releases (non-beta versions only). To enable this feature:
+
+1. **Environment Configuration**: Set the following environment variables:
+   ```bash
+   export USE_GITHUB_RELEASES=true
+   export GITHUB_RELEASES_OWNER=SimplyRin
+   export GITHUB_RELEASES_REPO=desktop
+   ```
+
+2. **Build-time Configuration**: When building from source, you can use the `.env.github-releases` file:
+   ```bash
+   cp .env.github-releases .env
+   yarn build:prod
+   ```
+
+3. **Features**:
+   - Automatic update checking (for production and beta builds)
+   - Update notifications in the app
+   - Download and install latest releases from SimplyRin/desktop
+   - Compatible with .deb, and .rpm packages
+
+**Note**: The automatic update feature is only available for non-beta/development builds and requires internet connectivity to check for updates.
 
 <picture>
   <source
@@ -25,7 +76,6 @@ This repository contains specific patches on top of the upstream
 
 It also publishes [releases](https://github.com/shiftkey/desktop/releases) for various Linux distributions:
 
- - AppImage (`.AppImage`)
  - Debian (`.deb`)
  - RPM (`.rpm`)
 
@@ -134,7 +184,7 @@ Arch Linux users can install GitHub Desktop from the [AUR](https://aur.archlinux
 
 ### Cross-Distribution Packages
 
-GitHub Desktop is also available cross-platform as a [Flatpak](https://github.com/flathub/io.github.shiftey.Desktop) and [AppImage](https://appimage.github.io/GitHubDesktop/).
+GitHub Desktop is also available cross-platform as a [Flatpak](https://github.com/flathub/io.github.shiftey.Desktop).
 
 ### deb-get
 

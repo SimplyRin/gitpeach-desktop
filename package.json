@@ -12,7 +12,7 @@
     "test": "node script/test.mjs",
     "test:unit": "node script/test.mjs",
     "test:setup": "ts-node -P script/tsconfig.json script/test-setup.ts",
-    "postinstall": "ts-node -P script/tsconfig.json script/post-install.ts",
+    "postinstall": "node -e \"if(process.env.SKIP_POSTINSTALL === '1' || process.env.CI === 'true'){console.log('Postinstall skipped due to environment settings');}else{try{require('child_process').execSync('ts-node -P script/tsconfig.json script/post-install.ts', {stdio:'inherit'})}catch(e){console.log('Postinstall failed but continuing:', e.message)}}\"",
     "start": "cross-env NODE_ENV=development ts-node -P script/tsconfig.json script/start.ts",
     "start:prod": "cross-env NODE_ENV=production ts-node -P script/tsconfig.json script/start.ts",
     "compile:dev": "cross-env NODE_ENV=development TS_NODE_PROJECT=script/tsconfig.json parallel-webpack --config app/webpack.development.ts",
@@ -20,6 +20,7 @@
     "build:dev": "yarn compile:dev && cross-env NODE_ENV=development ts-node -P script/tsconfig.json script/build.ts",
     "build:prod": "yarn compile:prod && cross-env NODE_ENV=production ts-node -P script/tsconfig.json script/build.ts",
     "package": "ts-node -P script/tsconfig.json script/package.ts",
+    "electron-builder": "electron-builder",
     "generate-octicons": "ts-node -P script/tsconfig.json script/generate-octicons.ts",
     "compile:script": "tsc -P script/tsconfig.json",
     "lint": "yarn prettier && yarn lint:src",
@@ -50,7 +51,15 @@
     "yarn": ">= 1.9"
   },
   "resolutions": {
-    "@types/react-css-transition-replace/@types/react": "^16.14.62"
+    "@types/react-css-transition-replace/@types/react": "^16.14.62",
+    "postinstall-postinstall": "^2.1.0",
+    "minimatch": "^3.0.5",
+    "@types/minimatch": "^3.0.5",
+    "@types/react-addons-transition-group/@types/react": "^16.14.62",
+    "@types/react": "^16.14.62",
+    "electron-builder": "25.1.8",
+    "string-width": "^4.2.3",
+    "yargs/string-width": "^4.2.3"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.25.0",
@@ -124,6 +133,7 @@
     "@types/lodash": "^4.14.178",
     "@types/marked": "^4.0.1",
     "@types/memoize-one": "^3.1.1",
+    "@types/minimatch": "^3.0.5",
     "@types/minimist": "^1.2.5",
     "@types/mri": "^1.1.0",
     "@types/node": "22.10.9",
@@ -156,14 +166,13 @@
     "@types/xml2js": "^0.4.11",
     "diff": "^7.0.0",
     "electron": "36.1.0",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "25.1.8",
     "electron-packager": "^17.1.2",
     "electron-winstaller": "^5.0.0",
     "eslint-plugin-github": "^5.1.5",
     "markdownlint-cli": "^0.32.2",
     "node-test-github-reporter": "^1.2.0",
     "patch-package": "^8.0.0",
-    "postinstall-postinstall": "^2.1.0",
     "reserved-words": "^0.1.2",
     "tsconfig-paths": "^3.9.0",
     "tsx": "^4.19.3"

@@ -18,7 +18,6 @@ On Windows you have two options:
 On Linux there are four different package formats available, depending on your
 distribution:
 
- - AppImage (`.AppImage`)
  - Debian (`.deb`)
  - RPM (`.rpm`)
 
@@ -38,7 +37,7 @@ GitHub Desktop will create directories to manage the files and data it needs to 
 
 This varies based on the installer chosen:
 
- - AppImage, Debian and RPM: `~/.config/GitHub Desktop/`
+ - Debian and RPM: `~/.config/GitHub Desktop/`
 
 ## Log Files
 
