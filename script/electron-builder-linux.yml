@@ -1,4 +1,6 @@
 artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
+directories:
+  output: 'dist'
 linux:
   category: 'GNOME;GTK;Development'
   packageCategory: 'GNOME;GTK;Development'
@@ -27,8 +29,7 @@ linux:
   executableName: 'github-desktop'
 
 appImage:
-  # Include essential system libraries in AppImage
-  systemIntegration: 'ask'
+  # systemIntegration is deprecated in newer versions
   artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
 
 deb:
@@ -43,6 +44,7 @@ deb:
     - liblzma5
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
+  packageCategory: 'GNOME;GTK;Development'
 
 rpm:
   depends:
@@ -56,3 +58,4 @@ rpm:
     - xz-libs
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
+  packageCategory: 'GNOME;GTK;Development'

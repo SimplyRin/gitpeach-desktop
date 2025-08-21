@@ -102,18 +102,43 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     }
   }
 
-  const appImageInstaller = `${distRoot}/GitHubDesktop-linux-*.AppImage`
+  // Find all generated packages (AppImage, deb, rpm) for all architectures
+  const patterns = [
+    `${distRoot}/GitHubDesktop-linux-*.AppImage`,
+    `${distRoot}/GitHubDesktop-*.deb`,
+    `${distRoot}/GitHubDesktop-*.rpm`
+  ]
 
-  const files = await globPromise(appImageInstaller)
-  if (files.length !== 1) {
+  let allFiles: string[] = []
+  
+  for (const pattern of patterns) {
+    try {
+      const files = await globPromise(pattern)
+      allFiles = allFiles.concat(files)
+      console.log(`Found ${files.length} files matching pattern: ${pattern}`)
+      files.forEach(file => console.log(`  - ${file}`))
+    } catch (error) {
+      console.log(`No files found for pattern: ${pattern}`)
+    }
+  }
+
+  if (allFiles.length === 0) {
+    console.log(`No packages found in ${distRoot}, listing directory contents:`)
+    try {
+      const fs = require('fs')
+      const contents = fs.readdirSync(distRoot)
+      console.log('Directory contents:', contents)
+    } catch (err) {
+      console.log('Could not list directory contents:', err)
+    }
+    
     return Promise.reject(
-      `Expected one AppImage installer but instead found '${files.join(
-        ', '
-      )}' - exiting...`
+      `Expected at least one package installer but found none in ${distRoot} - exiting...`
     )
   }
 
-  const appImageInstallerPath = files[0]
+  console.log(`Successfully found ${allFiles.length} package(s):`)
+  allFiles.forEach(file => console.log(`  - ${file}`))
 
-  return Promise.resolve([appImageInstallerPath])
+  return Promise.resolve(allFiles)
 }

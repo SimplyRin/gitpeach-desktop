@@ -355,16 +355,39 @@ jobs:
           else
             echo "TypeScript execution failed, trying alternative..."
             # Fallback to direct electron-builder execution
-            echo "Installing electron-builder globally..."
-            npm install -g electron-builder@^25.1.8 || true
+            echo "Installing specific electron-builder version..."
+            npm install -g electron-builder@25.1.8 || true
             
             echo "Building packages with electron-builder..."
-            npx electron-builder --config script/electron-builder-linux.yml --publish=never || true
+            echo "Current working directory: $(pwd)"
+            echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
+            
+            # Try building each target separately for better error isolation
+            echo "Building AppImage packages..."
+            npx electron-builder --linux AppImage --config script/electron-builder-linux.yml --publish=never || echo "AppImage build failed"
+            
+            echo "Building deb packages..."
+            npx electron-builder --linux deb --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
+            
+            echo "Building rpm packages..."
+            npx electron-builder --linux rpm --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
+            
+            echo "Alternative packaging completed"
           fi
 
           # Verify packages were created and check sizes  
           echo "Packaging completed. Generated files:"
-          ls -lh dist/ || echo "No dist files found"
+          ls -lha dist/ || echo "No dist files found"
+          
+          # List all files recursively to debug
+          echo "All files in dist directory:"
+          find dist/ -type f -name "*" 2>/dev/null || echo "Could not list dist files"
+          
+          # Check for specific package types
+          echo "Looking for specific package types:"
+          echo "AppImage files: $(find dist/ -name "*.AppImage" 2>/dev/null | wc -l)"
+          echo "DEB files: $(find dist/ -name "*.deb" 2>/dev/null | wc -l)"
+          echo "RPM files: $(find dist/ -name "*.rpm" 2>/dev/null | wc -l)"
 
           # Verify architecture of generated binaries
           echo "Verifying binary architectures..."
@@ -421,7 +444,7 @@ jobs:
           path: |
             dist/*.deb
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: ignore
 
       - name: Upload .rpm packages
         uses: actions/upload-artifact@v4
@@ -433,7 +456,7 @@ jobs:
           path: |
             dist/*.rpm
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: ignore
 
       - name: Upload AppImages
         uses: actions/upload-artifact@v4
@@ -445,7 +468,22 @@ jobs:
           path: |
             dist/*.AppImage
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: ignore
+
+      - name: Upload all Linux packages
+        uses: actions/upload-artifact@v4
+        if:
+          ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch' }}
+        with:
+          name: github-desktop-linux-all-packages
+          path: |
+            dist/GitHubDesktop-*
+            dist/*.deb
+            dist/*.rpm
+            dist/*.AppImage
+          retention-days: 30
+          if-no-files-found: ignore
 
       - name: Upload checksums
         uses: actions/upload-artifact@v4

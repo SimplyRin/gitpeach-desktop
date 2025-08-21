@@ -232,23 +232,50 @@ async function packageLinux() {
   }
 
   try {
-    console.log('Building AppImage...')
-    const files = await packageElectronBuilder()
+    console.log('Building all Linux packages with electron-builder...')
+    const allPackages = await packageElectronBuilder()
 
-    console.log('Building Debian package...')
-    const debianPackage = await packageDebian()
-
-    console.log('Building RedHat package...')
-    const redhatPackage = await packageRedhat()
-
-    const installers = [...files, debianPackage, redhatPackage]
-
+    // electron-builder now handles AppImage, deb, and rpm packages
+    // so we don't need separate packageDebian() and packageRedhat() calls
+    
     console.log('Generating checksums...')
-    await generateChecksums(installers)
+    await generateChecksums(allPackages)
 
-    return installers
+    return allPackages
   } catch (error) {
     console.error('Linux packaging failed:', error)
+    
+    // Fallback: try individual packaging if electron-builder fails
+    try {
+      console.log('Attempting fallback packaging...')
+      const files: string[] = []
+      
+      // Try building individual packages
+      console.log('Building Debian package...')
+      try {
+        const debianPackage = await packageDebian()
+        files.push(debianPackage)
+      } catch (debError) {
+        console.log('Debian packaging failed:', debError)
+      }
+
+      console.log('Building RedHat package...')
+      try {
+        const redhatPackage = await packageRedhat()
+        files.push(redhatPackage)
+      } catch (rpmError) {
+        console.log('RedHat packaging failed:', rpmError)
+      }
+
+      if (files.length > 0) {
+        console.log('Generating checksums for fallback packages...')
+        await generateChecksums(files)
+        return files
+      }
+    } catch (fallbackError) {
+      console.error('Fallback packaging also failed:', fallbackError)
+    }
+    
     throw error
   }
 }
