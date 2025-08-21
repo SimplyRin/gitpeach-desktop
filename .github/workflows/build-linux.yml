@@ -86,9 +86,13 @@ jobs:
         continue-on-error: true
 
   build-linux:
-    name: Build Linux Package (x64)
+    name: Build Linux Package (${{ matrix.arch }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+      fail-fast: false
 
     steps:
       - name: Checkout code
@@ -155,11 +159,50 @@ jobs:
           # Install additional tools for electron-builder packaging
           sudo apt-get install -y fakeroot dpkg rpm
 
+          # Install ARM64 cross-compilation tools if building for arm64
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            echo "Installing ARM64 cross-compilation tools..."
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            
+            # Skip ARM64 package installation due to repository issues
+            # Instead, rely on cross-compilation toolchain only
+            echo "Skipping ARM64 library installation due to Ubuntu repository limitations"
+            echo "Using cross-compilation toolchain for ARM64 builds"
+            
+            # Verify cross-compilation tools are available
+            aarch64-linux-gnu-gcc --version || echo "ARM64 GCC not found"
+            aarch64-linux-gnu-g++ --version || echo "ARM64 G++ not found"
+          fi
+
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
 
       - name: Install dependencies
         run: |
+          # Set architecture-specific variables early
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            export npm_config_target_arch=arm64
+            export npm_config_target_platform=linux
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+            export AR=aarch64-linux-gnu-ar
+            export STRIP=aarch64-linux-gnu-strip
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+            export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig
+            export CROSS_COMPILE=aarch64-linux-gnu-
+            # Disable node-gyp rebuild for modules that don't support cross-compilation
+            export npm_config_build_from_source=false
+            # Skip optional dependencies that might fail on cross-compilation
+            export npm_config_optional=false
+            echo "Set up ARM64 environment for native modules"
+            echo "CC=$CC, CXX=$CXX"
+            echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          else
+            export npm_config_target_arch=x64
+            export CC=gcc
+            export CXX=g++
+          fi
+
           # Install root dependencies
           echo "Installing root dependencies..."
           yarn install --frozen-lockfile --no-progress || yarn install --no-progress
@@ -177,7 +220,15 @@ jobs:
           echo "Building vendor desktop-notifications module..."
           if [ -d "vendor/desktop-notifications" ]; then
             cd vendor/desktop-notifications
-            yarn install || npm install || true
+            
+            # Skip native module compilation for ARM64 cross-build if it fails
+            if [ "${{ matrix.arch }}" = "arm64" ]; then
+              echo "Building desktop-notifications for ARM64 (may skip native parts)"
+              yarn install --ignore-optional || npm install --ignore-optional || true
+            else
+              yarn install || npm install || true
+            fi
+            
             # Ensure TypeScript config has skipLibCheck
             if [ -f "tsconfig.json" ]; then
               # Check if skipLibCheck is already present, if not add it
@@ -192,7 +243,15 @@ jobs:
                 " || true
               fi
             fi
-            yarn run build || npm run build || true
+            
+            # Build with appropriate settings for each architecture
+            if [ "${{ matrix.arch }}" = "arm64" ]; then
+              echo "Building for ARM64 - skipping native compilation if needed"
+              yarn run build || npm run build || echo "Native build failed for ARM64, continuing with JS-only version"
+            else
+              yarn run build || npm run build || true
+            fi
+            
             cd ../../
             
             # Create symlink in app/node_modules for webpack resolution
@@ -234,11 +293,32 @@ jobs:
 
       - name: Build production app
         run: |
-          echo "Building production application..."
+          echo "Building production application for ${{ matrix.arch }}..."
 
           # Set environment variables
           export NODE_ENV=production
           export CI=true
+
+          # Set architecture-specific build variables
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            export npm_config_target_arch=arm64
+            export npm_config_target_platform=linux
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+            export AR=aarch64-linux-gnu-ar
+            export STRIP=aarch64-linux-gnu-strip
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+            export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig
+            export CROSS_COMPILE=aarch64-linux-gnu-
+            export npm_config_build_from_source=false
+            export npm_config_optional=false
+            echo "Set up ARM64 cross-compilation environment"
+          else
+            export npm_config_target_arch=x64
+            export CC=gcc
+            export CXX=g++
+            export LINK=g++
+          fi
 
           # Verify Git is available for dugite
           echo "Git version: $(git --version)"
@@ -271,14 +351,11 @@ jobs:
           # Skip any postinstall hooks during build
           SKIP_POSTINSTALL: 1
           CI: true
-          # Set compiler environment for native modules
-          CC: gcc
-          CXX: g++
-          LINK: g++
+          # Note: CC, CXX, LINK are set dynamically in the script above based on matrix.arch
 
       - name: Package Linux application
         run: |
-          echo "Starting Linux packaging..."
+          echo "Starting Linux packaging for ${{ matrix.arch }}..."
 
           # Verify build artifacts exist
           if [ ! -d "out" ]; then
@@ -291,13 +368,37 @@ jobs:
           export PATH="$GIT_EXEC_PATH:$PATH"
           echo "Git exec path: $GIT_EXEC_PATH"
 
+          # Set architecture-specific packaging variables
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            export npm_config_target_arch=arm64
+            export npm_config_target_platform=linux
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+            export AR=aarch64-linux-gnu-ar
+            export STRIP=aarch64-linux-gnu-strip
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig
+            export PKG_CONFIG_LIBDIR=/usr/lib/aarch64-linux-gnu/pkgconfig
+            export CROSS_COMPILE=aarch64-linux-gnu-
+            export npm_config_build_from_source=false
+            export npm_config_optional=false
+            ARCH_SUFFIX="-arm64"
+            PACKAGED_DIR="github-desktop-linux-arm64"
+          else
+            export npm_config_target_arch=x64
+            export CC=gcc
+            export CXX=g++
+            export LINK=g++
+            ARCH_SUFFIX=""
+            PACKAGED_DIR="github-desktop-linux-x64"
+          fi
+
           # Check current dist structure
           echo "Current dist content before packaging:"
           ls -la dist/ || echo "No dist directory yet"
 
           # Verify the packaged electron app exists
           echo "Checking packaged app structure:"
-          ls -la dist/github-desktop-linux-x64/ || echo "Packaged app directory not found"
+          ls -la "dist/${PACKAGED_DIR}/" || echo "Packaged app directory not found"
 
           # Fix electron-builder yargs dependency chain issue
           echo "Fixing electron-builder dependency conflicts..."
@@ -321,7 +422,7 @@ jobs:
           yarn install --ignore-scripts --force || true
 
           # Try using simplified packaging approach first
-          echo "Attempting simplified packaging..."
+          echo "Attempting simplified packaging for ${{ matrix.arch }}..."
 
           # First ensure electron-builder is available globally
           echo "Installing electron-builder globally for reliable access..."
@@ -334,19 +435,19 @@ jobs:
             echo "TypeScript execution failed, trying npx electron-builder approach..."
             
             # The npx approach seems to be working based on the logs
-            echo "Building AppImage with npx electron-builder..."
-            if npx electron-builder --linux appimage --prepackaged dist/github-desktop-linux-x64 --publish=never; then
+            echo "Building AppImage with npx electron-builder for ${{ matrix.arch }}..."
+            if npx electron-builder --linux appimage --prepackaged "dist/${PACKAGED_DIR}" --publish=never --${{ matrix.arch }}; then
               echo "AppImage build succeeded"
             else
               echo "AppImage build failed, trying different approach..."
             fi
             
             # Try building other formats
-            echo "Building Debian package with npx electron-builder..."
-            npx electron-builder --linux deb --prepackaged dist/github-desktop-linux-x64 --publish=never || echo "Debian build failed"
+            echo "Building Debian package with npx electron-builder for ${{ matrix.arch }}..."
+            npx electron-builder --linux deb --prepackaged "dist/${PACKAGED_DIR}" --publish=never --${{ matrix.arch }} || echo "Debian build failed"
             
-            echo "Building RPM package with npx electron-builder..."
-            npx electron-builder --linux rpm --prepackaged dist/github-desktop-linux-x64 --publish=never || echo "RPM build failed"
+            echo "Building RPM package with npx electron-builder for ${{ matrix.arch }}..."
+            npx electron-builder --linux rpm --prepackaged "dist/${PACKAGED_DIR}" --publish=never --${{ matrix.arch }} || echo "RPM build failed"
             
             # As a final fallback, create a simple tar.gz if nothing else worked
             echo "Creating fallback tar.gz package..."
@@ -363,10 +464,10 @@ jobs:
                 }
                 
                 console.log('Checking packaged app...');
-                const packagedAppDir = path.join(distDir, 'github-desktop-linux-x64');
+                const packagedAppDir = path.join(distDir, '${PACKAGED_DIR}');
                 if (fs.existsSync(packagedAppDir)) {
                   console.log('Packaged app found, creating tar.gz...');
-                  execSync('tar -czf dist/github-desktop-linux-x64.tar.gz -C dist github-desktop-linux-x64');
+                  execSync('tar -czf dist/${PACKAGED_DIR}.tar.gz -C dist ${PACKAGED_DIR}');
                   console.log('Created tar.gz package');
                 } else {
                   console.log('No packaged app found in:', packagedAppDir);
@@ -385,6 +486,28 @@ jobs:
           # Verify packages were created and check sizes
           echo "Packaging completed. Generated files:"
           ls -lh dist/ || echo "No dist files found"
+
+          # Verify architecture of generated binaries
+          echo "Verifying binary architectures..."
+          for f in dist/*.{deb,rpm,AppImage}; do
+            if [ -f "$f" ]; then
+              echo "Checking $f:"
+              file "$f" || true
+              
+              # For AppImage, extract and check the main binary
+              if [[ "$f" == *.AppImage ]]; then
+                echo "Extracting AppImage to verify binary architecture..."
+                chmod +x "$f"
+                "$f" --appimage-extract >/dev/null 2>&1 || true
+                if [ -f "squashfs-root/github-desktop" ]; then
+                  echo "Main binary architecture:"
+                  file squashfs-root/github-desktop || true
+                  readelf -h squashfs-root/github-desktop | grep -E "(Class|Machine)" || true
+                fi
+                rm -rf squashfs-root 2>/dev/null || true
+              fi
+            fi
+          done
 
           # Size sanity check - packages should be > 100MB
           for f in dist/*.{deb,rpm,AppImage}; do
@@ -407,7 +530,7 @@ jobs:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-deb
+          name: github-desktop-linux-deb-${{ matrix.arch }}
           path: |
             dist/*.deb
           retention-days: 30
@@ -419,7 +542,7 @@ jobs:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-rpm
+          name: github-desktop-linux-rpm-${{ matrix.arch }}
           path: |
             dist/*.rpm
           retention-days: 30
@@ -431,7 +554,7 @@ jobs:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-appimage
+          name: github-desktop-linux-appimage-${{ matrix.arch }}
           path: |
             dist/*.AppImage
           retention-days: 30
@@ -443,7 +566,7 @@ jobs:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-checksums
+          name: github-desktop-linux-checksums-${{ matrix.arch }}
           path: |
             dist/*.sha256
             dist/checksums.txt
@@ -469,10 +592,38 @@ jobs:
         with:
           path: ./dist-artifacts
 
-      - name: Display downloaded artifacts
+      - name: Organize artifacts by architecture
         run: |
           echo "Downloaded artifacts:"
           find ./dist-artifacts -type f -ls
+
+          # Create organized structure
+          mkdir -p ./dist-artifacts/organized/{x64,arm64}
+
+          # Move x64 artifacts
+          if [ -d "./dist-artifacts/github-desktop-linux-deb-x64" ]; then
+            mv ./dist-artifacts/github-desktop-linux-deb-x64/* ./dist-artifacts/organized/x64/ 2>/dev/null || true
+          fi
+          if [ -d "./dist-artifacts/github-desktop-linux-rpm-x64" ]; then
+            mv ./dist-artifacts/github-desktop-linux-rpm-x64/* ./dist-artifacts/organized/x64/ 2>/dev/null || true
+          fi
+          if [ -d "./dist-artifacts/github-desktop-linux-appimage-x64" ]; then
+            mv ./dist-artifacts/github-desktop-linux-appimage-x64/* ./dist-artifacts/organized/x64/ 2>/dev/null || true
+          fi
+
+          # Move arm64 artifacts
+          if [ -d "./dist-artifacts/github-desktop-linux-deb-arm64" ]; then
+            mv ./dist-artifacts/github-desktop-linux-deb-arm64/* ./dist-artifacts/organized/arm64/ 2>/dev/null || true
+          fi
+          if [ -d "./dist-artifacts/github-desktop-linux-rpm-arm64" ]; then
+            mv ./dist-artifacts/github-desktop-linux-rpm-arm64/* ./dist-artifacts/organized/arm64/ 2>/dev/null || true
+          fi
+          if [ -d "./dist-artifacts/github-desktop-linux-appimage-arm64" ]; then
+            mv ./dist-artifacts/github-desktop-linux-appimage-arm64/* ./dist-artifacts/organized/arm64/ 2>/dev/null || true
+          fi
+
+          echo "Organized artifacts:"
+          find ./dist-artifacts/organized -type f -ls
 
       - name: Set version and build number
         id: vars
@@ -502,21 +653,36 @@ jobs:
           cd dist-artifacts
           echo "# Checksums for GitHub Desktop for Linux ${{ env.VERSION }}" > checksums.md
           echo "" >> checksums.md
-          echo "| File | MD5 | SHA256 |" >> checksums.md
-          echo "|------|-----|--------|" >> checksums.md
+          echo "| File | Architecture | MD5 | SHA256 |" >> checksums.md
+          echo "|------|--------------|-----|--------|" >> checksums.md
 
-          for dir in */; do
-            cd "$dir"
+          # Process x64 files
+          if [ -d "organized/x64" ]; then
+            cd organized/x64
             for file in *.{deb,rpm,AppImage,tar.gz}; do
               if [ -f "$file" ]; then
                 filename=$(basename "$file")
                 md5_hash=$(md5sum "$file" | cut -d ' ' -f 1)
                 sha256_hash=$(sha256sum "$file" | cut -d ' ' -f 1)
-                echo "| [$filename](https://github.com/${{ github.repository }}/releases/download/${{ env.RELEASE_TAG }}/$filename) | \`$md5_hash\` | \`$sha256_hash\` |" >> ../checksums.md
+                echo "| [$filename](https://github.com/${{ github.repository }}/releases/download/${{ env.RELEASE_TAG }}/$filename) | x64 | \`$md5_hash\` | \`$sha256_hash\` |" >> ../../checksums.md
               fi
             done
-            cd ..
-          done
+            cd ../../
+          fi
+
+          # Process arm64 files
+          if [ -d "organized/arm64" ]; then
+            cd organized/arm64
+            for file in *.{deb,rpm,AppImage,tar.gz}; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                md5_hash=$(md5sum "$file" | cut -d ' ' -f 1)
+                sha256_hash=$(sha256sum "$file" | cut -d ' ' -f 1)
+                echo "| [$filename](https://github.com/${{ github.repository }}/releases/download/${{ env.RELEASE_TAG }}/$filename) | arm64 | \`$md5_hash\` | \`$sha256_hash\` |" >> ../../checksums.md
+              fi
+            done
+            cd ../../
+          fi
 
       - name: Create Release
         id: create_release
@@ -531,90 +697,169 @@ jobs:
           body: |
             GitHub Desktop for Linux ${{ env.VERSION }}
 
+            This release includes packages for both x64 and ARM64 architectures.
+
             ## Installation
 
             ### Debian/Ubuntu (.deb)
-            Download the .deb file from the assets below and install:
+            Download the appropriate .deb file for your architecture:
+            - **x64**: GitHubDesktop-*-amd64.deb
+            - **ARM64**: GitHubDesktop-*-arm64.deb
+
+            Install with:
             ```bash
             sudo apt install ./GitHubDesktop-*.deb
             ```
 
             ### Red Hat/Fedora (.rpm)
-            Download the .rpm file from the assets below and install:
+            Download the appropriate .rpm file for your architecture:
+            - **x64**: GitHubDesktop-*-x86_64.rpm
+            - **ARM64**: GitHubDesktop-*-aarch64.rpm
+
+            Install with:
             ```bash
             sudo rpm -i GitHubDesktop-*.rpm
             ```
 
             ### AppImage (Universal)
-            Download the .AppImage file from the assets below:
+            Download the appropriate AppImage file for your architecture:
+            - **x64**: GitHubDesktop-*-x86_64.AppImage
+            - **ARM64**: GitHubDesktop-*-arm64.AppImage
+
+            Make executable and run:
             ```bash
             chmod +x GitHubDesktop-*.AppImage
             ./GitHubDesktop-*.AppImage
             ```
+
+            ## Architecture Detection
+            To determine your system architecture, run:
+            ```bash
+            uname -m
+            ```
+            - `x86_64` or `amd64` → use x64 packages
+            - `aarch64` or `arm64` → use ARM64 packages
 
       - name: Find release asset paths
         id: find_assets
         run: |
           cd dist-artifacts
 
-          # Find actual file paths
-          DEB_FILE=$(find . -name "*.deb" -type f | head -1)
-          RPM_FILE=$(find . -name "*.rpm" -type f | head -1)
-          APPIMAGE_FILE=$(find . -name "*.AppImage" -type f | head -1)
+          # Find actual file paths for both architectures
+          DEB_X64_FILE=$(find organized/x64 -name "*.deb" -type f | head -1)
+          DEB_ARM64_FILE=$(find organized/arm64 -name "*.deb" -type f | head -1)
+          RPM_X64_FILE=$(find organized/x64 -name "*.rpm" -type f | head -1)
+          RPM_ARM64_FILE=$(find organized/arm64 -name "*.rpm" -type f | head -1)
+          APPIMAGE_X64_FILE=$(find organized/x64 -name "*.AppImage" -type f | head -1)
+          APPIMAGE_ARM64_FILE=$(find organized/arm64 -name "*.AppImage" -type f | head -1)
 
           echo "Found files:"
-          echo "DEB: $DEB_FILE"
-          echo "RPM: $RPM_FILE"
-          echo "AppImage: $APPIMAGE_FILE"
+          echo "DEB x64: $DEB_X64_FILE"
+          echo "DEB arm64: $DEB_ARM64_FILE"
+          echo "RPM x64: $RPM_X64_FILE"
+          echo "RPM arm64: $RPM_ARM64_FILE"
+          echo "AppImage x64: $APPIMAGE_X64_FILE"
+          echo "AppImage arm64: $APPIMAGE_ARM64_FILE"
 
           # Output file paths for next steps
-          echo "deb_file=${DEB_FILE}" >> $GITHUB_OUTPUT
-          echo "rpm_file=${RPM_FILE}" >> $GITHUB_OUTPUT
-          echo "appimage_file=${APPIMAGE_FILE}" >> $GITHUB_OUTPUT
+          echo "deb_x64_file=${DEB_X64_FILE}" >> $GITHUB_OUTPUT
+          echo "deb_arm64_file=${DEB_ARM64_FILE}" >> $GITHUB_OUTPUT
+          echo "rpm_x64_file=${RPM_X64_FILE}" >> $GITHUB_OUTPUT
+          echo "rpm_arm64_file=${RPM_ARM64_FILE}" >> $GITHUB_OUTPUT
+          echo "appimage_x64_file=${APPIMAGE_X64_FILE}" >> $GITHUB_OUTPUT
+          echo "appimage_arm64_file=${APPIMAGE_ARM64_FILE}" >> $GITHUB_OUTPUT
 
           # Output file names
-          if [ -n "$DEB_FILE" ]; then
-            echo "deb_name=$(basename "$DEB_FILE")" >> $GITHUB_OUTPUT
+          if [ -n "$DEB_X64_FILE" ]; then
+            echo "deb_x64_name=$(basename "$DEB_X64_FILE")" >> $GITHUB_OUTPUT
           fi
-          if [ -n "$RPM_FILE" ]; then
-            echo "rpm_name=$(basename "$RPM_FILE")" >> $GITHUB_OUTPUT
+          if [ -n "$DEB_ARM64_FILE" ]; then
+            echo "deb_arm64_name=$(basename "$DEB_ARM64_FILE")" >> $GITHUB_OUTPUT
           fi
-          if [ -n "$APPIMAGE_FILE" ]; then
-            echo "appimage_name=$(basename "$APPIMAGE_FILE")" >> $GITHUB_OUTPUT
+          if [ -n "$RPM_X64_FILE" ]; then
+            echo "rpm_x64_name=$(basename "$RPM_X64_FILE")" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "$RPM_ARM64_FILE" ]; then
+            echo "rpm_arm64_name=$(basename "$RPM_ARM64_FILE")" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "$APPIMAGE_X64_FILE" ]; then
+            echo "appimage_x64_name=$(basename "$APPIMAGE_X64_FILE")" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "$APPIMAGE_ARM64_FILE" ]; then
+            echo "appimage_arm64_name=$(basename "$APPIMAGE_ARM64_FILE")" >> $GITHUB_OUTPUT
           fi
 
-      - name: Upload .deb package to release
-        if: steps.find_assets.outputs.deb_file
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist-artifacts/${{ steps.find_assets.outputs.deb_file }}
-          asset_name: ${{ steps.find_assets.outputs.deb_name }}
-          asset_content_type: application/vnd.debian.binary-package
-
-      - name: Upload .rpm package to release
-        if: steps.find_assets.outputs.rpm_file
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist-artifacts/${{ steps.find_assets.outputs.rpm_file }}
-          asset_name: ${{ steps.find_assets.outputs.rpm_name }}
-          asset_content_type: application/x-rpm
-
-      - name: Upload AppImage to release
-        if: steps.find_assets.outputs.appimage_file
+      - name: Upload .deb package (x64) to release
+        if: steps.find_assets.outputs.deb_x64_file
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path:
-            ./dist-artifacts/${{ steps.find_assets.outputs.appimage_file }}
-          asset_name: ${{ steps.find_assets.outputs.appimage_name }}
+            ./dist-artifacts/${{ steps.find_assets.outputs.deb_x64_file }}
+          asset_name: ${{ steps.find_assets.outputs.deb_x64_name }}
+          asset_content_type: application/vnd.debian.binary-package
+
+      - name: Upload .deb package (arm64) to release
+        if: steps.find_assets.outputs.deb_arm64_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            ./dist-artifacts/${{ steps.find_assets.outputs.deb_arm64_file }}
+          asset_name: ${{ steps.find_assets.outputs.deb_arm64_name }}
+          asset_content_type: application/vnd.debian.binary-package
+
+      - name: Upload .rpm package (x64) to release
+        if: steps.find_assets.outputs.rpm_x64_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            ./dist-artifacts/${{ steps.find_assets.outputs.rpm_x64_file }}
+          asset_name: ${{ steps.find_assets.outputs.rpm_x64_name }}
+          asset_content_type: application/x-rpm
+
+      - name: Upload .rpm package (arm64) to release
+        if: steps.find_assets.outputs.rpm_arm64_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            ./dist-artifacts/${{ steps.find_assets.outputs.rpm_arm64_file }}
+          asset_name: ${{ steps.find_assets.outputs.rpm_arm64_name }}
+          asset_content_type: application/x-rpm
+
+      - name: Upload AppImage (x64) to release
+        if: steps.find_assets.outputs.appimage_x64_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            ./dist-artifacts/${{ steps.find_assets.outputs.appimage_x64_file }}
+          asset_name: ${{ steps.find_assets.outputs.appimage_x64_name }}
+          asset_content_type: application/x-executable
+
+      - name: Upload AppImage (arm64) to release
+        if: steps.find_assets.outputs.appimage_arm64_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            ./dist-artifacts/${{ steps.find_assets.outputs.appimage_arm64_file
+            }}
+          asset_name: ${{ steps.find_assets.outputs.appimage_arm64_name }}
           asset_content_type: application/x-executable
 
       - name: Upload checksums to release

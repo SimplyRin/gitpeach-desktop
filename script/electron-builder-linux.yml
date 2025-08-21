@@ -14,12 +14,15 @@ linux:
     - target: AppImage
       arch:
         - x64
+        - arm64
     - target: deb
       arch:
         - x64
+        - arm64
     - target: rpm
       arch:
         - x64
+        - arm64
   maintainer: 'GitHub Desktop Linux <noreply@github.com>'
   executableName: 'github-desktop'
 
