@@ -119,6 +119,17 @@ jobs:
           # Install core development dependencies
           sudo apt-get install -y libsecret-1-dev libxss1 libnss3-dev
 
+          # Install essential compression libraries (fixes libz.so missing error)
+          sudo apt-get install -y \
+            zlib1g \
+            zlib1g-dev \
+            libbz2-1.0 \
+            libbz2-dev \
+            liblzma5 \
+            liblzma-dev \
+            libzstd1 \
+            libzstd-dev
+
           # Try to install libgconf-2-4, fallback to newer alternatives if not available
           sudo apt-get install -y libgconf-2-4 || {
             echo "libgconf-2-4 not available, installing alternatives..."
@@ -142,6 +153,25 @@ jobs:
 
           # Try to install newer audio packages, fallback to older if needed
           sudo apt-get install -y libasound2t64 || sudo apt-get install -y libasound2 || true
+
+          # Install additional runtime libraries that AppImage might need
+          sudo apt-get install -y \
+            libfontconfig1 \
+            libfreetype6 \
+            libx11-6 \
+            libxext6 \
+            libxfixes3 \
+            libxi6 \
+            libxrender1 \
+            libxcb1 \
+            libxcb-dri3-0 \
+            libxcb-xinerama0 \
+            libxcb-randr0 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-icccm4 \
+            libatspi2.0-0 \
+            libdrm-common
 
           # Install build tools required for native modules
           sudo apt-get install -y python3 python3-pip build-essential
@@ -282,6 +312,18 @@ jobs:
           export PATH="$GIT_EXEC_PATH:$PATH"
           echo "Git exec path: $GIT_EXEC_PATH"
 
+          # Ensure system libraries are available for AppImage bundling
+          echo "Checking system library availability for AppImage:"
+          ldconfig -p | grep -E "(libz|zlib|libbz2|liblzma)" || echo "Some compression libraries may not be found"
+          
+          # Run AppImage dependencies fix
+          echo "Running AppImage dependencies fix..."
+          bash script/fix-appimage-deps.sh || echo "Dependencies fix script failed, continuing..."
+          
+          # Set library path to include system libraries for electron-builder
+          export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/lib:/lib:$LD_LIBRARY_PATH"
+          echo "LD_LIBRARY_PATH set to: $LD_LIBRARY_PATH"
+
           # Check current dist structure
           echo "Current dist content before packaging:"
           ls -la dist/ || echo "No dist directory yet"
@@ -333,13 +375,21 @@ jobs:
               
               # For AppImage, extract and check the main binary
               if [[ "$f" == *.AppImage ]]; then
-                echo "Extracting AppImage to verify binary architecture..."
+                echo "Extracting AppImage to verify binary architecture and dependencies..."
                 chmod +x "$f"
                 "$f" --appimage-extract >/dev/null 2>&1 || true
                 if [ -f "squashfs-root/github-desktop" ]; then
                   echo "Main binary architecture:"
                   file squashfs-root/github-desktop || true
                   readelf -h squashfs-root/github-desktop | grep -E "(Class|Machine)" || true
+                  
+                  # Check for critical library dependencies
+                  echo "Checking for libz.so dependency in AppImage:"
+                  ldd squashfs-root/github-desktop | grep -E "(libz|zlib)" || echo "libz.so not found in dependencies"
+                  
+                  # List bundled libraries in AppImage
+                  echo "Bundled libraries in AppImage:"
+                  find squashfs-root -name "*.so*" | grep -E "(libz|zlib|libbz2|liblzma|libzstd)" || echo "No compression libraries found bundled"
                 fi
                 rm -rf squashfs-root 2>/dev/null || true
               fi

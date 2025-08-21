@@ -26,6 +26,11 @@ linux:
   maintainer: 'GitHub Desktop Linux <noreply@github.com>'
   executableName: 'github-desktop'
 
+appImage:
+  # Include essential system libraries in AppImage
+  systemIntegration: 'ask'
+  artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
+
 deb:
   depends:
     - git
@@ -33,6 +38,9 @@ deb:
     - libxss1
     - libnss3
     - libasound2
+    - zlib1g
+    - libbz2-1.0
+    - liblzma5
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
 
@@ -43,5 +51,8 @@ rpm:
     - libXScrnSaver
     - nss
     - alsa-lib
+    - zlib
+    - bzip2-libs
+    - xz-libs
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
