@@ -552,7 +552,8 @@ jobs:
             ./GitHubDesktop-*.AppImage
             ```
 
-      - name: Find and upload release assets
+      - name: Find release asset paths
+        id: find_assets
         run: |
           cd dist-artifacts
 
@@ -566,41 +567,64 @@ jobs:
           echo "RPM: $RPM_FILE"
           echo "AppImage: $APPIMAGE_FILE"
 
-          # Function to upload asset
-          upload_asset() {
-            local file_path="$1"
-            local asset_name="$2"
-            local content_type="$3"
-            
-            if [ -f "$file_path" ]; then
-              echo "Uploading $asset_name..."
-              curl \
-                -X POST \
-                -H "Authorization: token $GITHUB_TOKEN" \
-                -H "Content-Type: $content_type" \
-                --data-binary @"$file_path" \
-                "${{ steps.create_release.outputs.upload_url }}?name=$asset_name"
-            else
-              echo "File not found: $file_path"
-            fi
-          }
+          # Output file paths for next steps
+          echo "deb_file=${DEB_FILE}" >> $GITHUB_OUTPUT
+          echo "rpm_file=${RPM_FILE}" >> $GITHUB_OUTPUT
+          echo "appimage_file=${APPIMAGE_FILE}" >> $GITHUB_OUTPUT
 
-          # Upload files
+          # Output file names
           if [ -n "$DEB_FILE" ]; then
-            upload_asset "$DEB_FILE" "$(basename "$DEB_FILE")" "application/vnd.debian.binary-package"
+            echo "deb_name=$(basename "$DEB_FILE")" >> $GITHUB_OUTPUT
           fi
-
           if [ -n "$RPM_FILE" ]; then
-            upload_asset "$RPM_FILE" "$(basename "$RPM_FILE")" "application/x-rpm"
+            echo "rpm_name=$(basename "$RPM_FILE")" >> $GITHUB_OUTPUT
           fi
-
           if [ -n "$APPIMAGE_FILE" ]; then
-            upload_asset "$APPIMAGE_FILE" "$(basename "$APPIMAGE_FILE")" "application/x-executable"
+            echo "appimage_name=$(basename "$APPIMAGE_FILE")" >> $GITHUB_OUTPUT
           fi
 
-          # Upload checksums if available
-          if [ -f "checksums.md" ]; then
-            upload_asset "checksums.md" "checksums.md" "text/markdown"
-          fi
+      - name: Upload .deb package to release
+        if: steps.find_assets.outputs.deb_file
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist-artifacts/${{ steps.find_assets.outputs.deb_file }}
+          asset_name: ${{ steps.find_assets.outputs.deb_name }}
+          asset_content_type: application/vnd.debian.binary-package
+
+      - name: Upload .rpm package to release
+        if: steps.find_assets.outputs.rpm_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist-artifacts/${{ steps.find_assets.outputs.rpm_file }}
+          asset_name: ${{ steps.find_assets.outputs.rpm_name }}
+          asset_content_type: application/x-rpm
+
+      - name: Upload AppImage to release
+        if: steps.find_assets.outputs.appimage_file
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path:
+            ./dist-artifacts/${{ steps.find_assets.outputs.appimage_file }}
+          asset_name: ${{ steps.find_assets.outputs.appimage_name }}
+          asset_content_type: application/x-executable
+
+      - name: Upload checksums to release
+        if: hashFiles('./dist-artifacts/checksums.md')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist-artifacts/checksums.md
+          asset_name: checksums.md
+          asset_content_type: text/markdown
+        continue-on-error: true
