@@ -745,6 +745,9 @@ jobs:
         run: |
           cd dist-artifacts
 
+          echo "Debugging: Current directory structure"
+          find . -type f -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" | head -20
+
           # Find actual file paths for both architectures
           DEB_X64_FILE=$(find organized/x64 -name "*.deb" -type f | head -1)
           DEB_ARM64_FILE=$(find organized/arm64 -name "*.deb" -type f | head -1)
@@ -760,6 +763,15 @@ jobs:
           echo "RPM arm64: $RPM_ARM64_FILE"
           echo "AppImage x64: $APPIMAGE_X64_FILE"
           echo "AppImage arm64: $APPIMAGE_ARM64_FILE"
+
+          # Verify files exist and get their sizes
+          for file in "$DEB_X64_FILE" "$DEB_ARM64_FILE" "$RPM_X64_FILE" "$RPM_ARM64_FILE" "$APPIMAGE_X64_FILE" "$APPIMAGE_ARM64_FILE"; do
+            if [ -n "$file" ] && [ -f "$file" ]; then
+              echo "File: $file"
+              ls -lh "$file"
+              echo "Size: $(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null) bytes"
+            fi
+          done
 
           # Output file paths for next steps
           echo "deb_x64_file=${DEB_X64_FILE}" >> $GITHUB_OUTPUT
@@ -800,6 +812,7 @@ jobs:
             ./dist-artifacts/${{ steps.find_assets.outputs.deb_x64_file }}
           asset_name: ${{ steps.find_assets.outputs.deb_x64_name }}
           asset_content_type: application/vnd.debian.binary-package
+        continue-on-error: true
 
       - name: Upload .deb package (arm64) to release
         if: steps.find_assets.outputs.deb_arm64_file
@@ -812,6 +825,7 @@ jobs:
             ./dist-artifacts/${{ steps.find_assets.outputs.deb_arm64_file }}
           asset_name: ${{ steps.find_assets.outputs.deb_arm64_name }}
           asset_content_type: application/vnd.debian.binary-package
+        continue-on-error: true
 
       - name: Upload .rpm package (x64) to release
         if: steps.find_assets.outputs.rpm_x64_file
@@ -824,6 +838,7 @@ jobs:
             ./dist-artifacts/${{ steps.find_assets.outputs.rpm_x64_file }}
           asset_name: ${{ steps.find_assets.outputs.rpm_x64_name }}
           asset_content_type: application/x-rpm
+        continue-on-error: true
 
       - name: Upload .rpm package (arm64) to release
         if: steps.find_assets.outputs.rpm_arm64_file
@@ -836,6 +851,7 @@ jobs:
             ./dist-artifacts/${{ steps.find_assets.outputs.rpm_arm64_file }}
           asset_name: ${{ steps.find_assets.outputs.rpm_arm64_name }}
           asset_content_type: application/x-rpm
+        continue-on-error: true
 
       - name: Upload AppImage (x64) to release
         if: steps.find_assets.outputs.appimage_x64_file
@@ -848,6 +864,7 @@ jobs:
             ./dist-artifacts/${{ steps.find_assets.outputs.appimage_x64_file }}
           asset_name: ${{ steps.find_assets.outputs.appimage_x64_name }}
           asset_content_type: application/x-executable
+        continue-on-error: true
 
       - name: Upload AppImage (arm64) to release
         if: steps.find_assets.outputs.appimage_arm64_file
@@ -861,6 +878,7 @@ jobs:
             }}
           asset_name: ${{ steps.find_assets.outputs.appimage_arm64_name }}
           asset_content_type: application/x-executable
+        continue-on-error: true
 
       - name: Upload checksums to release
         if: hashFiles('./dist-artifacts/checksums.md')
