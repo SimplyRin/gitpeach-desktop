@@ -27,7 +27,6 @@ linux:
         - arm64
   maintainer: 'GitHub Desktop Linux <noreply@github.com>'
   executableName: 'github-desktop'
-  desktop: script/resources/github-desktop.desktop
 
 appImage:
   # systemIntegration is deprecated in newer versions
