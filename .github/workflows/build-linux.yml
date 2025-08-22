@@ -1,4 +1,4 @@
-name: CI / Linux Build (Simplified)
+name: CI / Linux Build
 
 on:
   push:
@@ -183,6 +183,32 @@ jobs:
           echo "Installing ARM64 cross-compilation tools..."
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
+          # Install qemu for ARM64 emulation and testing
+          sudo apt-get install -y qemu-user-static binfmt-support
+
+          # Install ARM64 libraries for cross-compilation
+          echo "Installing ARM64 libraries for AppImage..."
+          sudo apt-get install -y \
+            zlib1g:arm64 \
+            libbz2-1.0:arm64 \
+            liblzma5:arm64 \
+            libzstd1:arm64 \
+            libsecret-1-0:arm64 \
+            libxss1:arm64 \
+            libnss3:arm64 \
+            libasound2:arm64 || echo "Some ARM64 libraries may not be available"
+
+          # Enable multi-arch support for ARM64 packages
+          sudo dpkg --add-architecture arm64 || echo "Multi-arch already enabled or failed"
+          sudo apt-get update || echo "Update after adding architecture failed"
+          
+          # Try to install ARM64 libraries again after enabling multi-arch
+          sudo apt-get install -y \
+            zlib1g:arm64 \
+            libbz2-1.0:arm64 \
+            liblzma5:arm64 \
+            libzstd1:arm64 || echo "ARM64 libraries installation failed, will use system defaults"
+
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
 
@@ -350,6 +376,18 @@ jobs:
 
           # Package using the TypeScript script (this will build both x64 and ARM64)
           echo "Running packaging script..."
+          
+          # Set environment variables for cross-compilation
+          export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+          export CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
+          export AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar
+          export STRIP_aarch64_unknown_linux_gnu=aarch64-linux-gnu-strip
+          export PKG_CONFIG_PATH_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig
+          
+          # Set target architecture environment for ARM64 libraries
+          export TARGET_ARCH=multi
+          export ELECTRON_BUILDER_ARCH=both
+          
           if NODE_ENV=production yarn ts-node --transpile-only -P script/tsconfig.json script/package.ts; then
             echo "TypeScript packaging succeeded"
           else
@@ -361,6 +399,12 @@ jobs:
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
+            
+            # Set ARM64 cross-compilation environment for electron-builder
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+            export AR=aarch64-linux-gnu-ar
+            export STRIP=aarch64-linux-gnu-strip
             
             # Try building each target separately for better error isolation
             echo "Building AppImage packages..."
@@ -406,13 +450,33 @@ jobs:
                   file squashfs-root/github-desktop || true
                   readelf -h squashfs-root/github-desktop | grep -E "(Class|Machine)" || true
                   
-                  # Check for critical library dependencies
-                  echo "Checking for libz.so dependency in AppImage:"
-                  ldd squashfs-root/github-desktop | grep -E "(libz|zlib)" || echo "libz.so not found in dependencies"
+                  # Detect if this is ARM64 AppImage
+                  if file squashfs-root/github-desktop | grep -q "aarch64"; then
+                    echo "ARM64 AppImage detected - checking ARM64 library dependencies..."
+                    
+                    # For ARM64, we need to use qemu-aarch64 to run ldd properly
+                    if command -v qemu-aarch64 >/dev/null 2>&1; then
+                      echo "Using qemu-aarch64 to check ARM64 dependencies:"
+                      qemu-aarch64 -L /usr/aarch64-linux-gnu /lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 --list squashfs-root/github-desktop | grep -E "(libz|zlib)" || echo "libz.so not found in ARM64 dependencies"
+                    else
+                      echo "qemu-aarch64 not available, cannot check ARM64 runtime dependencies"
+                      echo "Checking if ARM64 libraries are bundled in AppImage:"
+                      find squashfs-root -name "*aarch64*" -o -name "*arm64*" | head -10 || echo "No ARM64 specific paths found"
+                    fi
+                  else
+                    echo "x64 AppImage detected - checking x64 library dependencies..."
+                    # Check for critical library dependencies
+                    echo "Checking for libz.so dependency in AppImage:"
+                    ldd squashfs-root/github-desktop | grep -E "(libz|zlib)" || echo "libz.so not found in dependencies"
+                  fi
                   
                   # List bundled libraries in AppImage
                   echo "Bundled libraries in AppImage:"
                   find squashfs-root -name "*.so*" | grep -E "(libz|zlib|libbz2|liblzma|libzstd)" || echo "No compression libraries found bundled"
+                  
+                  # Check lib directories in AppImage
+                  echo "Library directories in AppImage:"
+                  find squashfs-root -type d -name "*lib*" | head -10 || echo "No lib directories found"
                 fi
                 rm -rf squashfs-root 2>/dev/null || true
               fi
