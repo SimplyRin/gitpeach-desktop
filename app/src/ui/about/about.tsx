@@ -321,6 +321,9 @@ export class About extends React.Component<IAboutProps> {
                 Responsible use of Copilot in GitHub Desktop
               </LinkButton>
             </p>
+            <p className="no-padding terms-and-license build-info">
+              Built by Hiroki Sasai
+            </p>
           </div>
         </DialogContent>
         <DefaultDialogFooter />
