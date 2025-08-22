@@ -28,17 +28,16 @@ linux:
   maintainer: 'GitHub Desktop Linux <noreply@github.com>'
   executableName: 'github-desktop'
   desktop:
-    entry:
-      Name: 'GitHub Desktop'
-      GenericName: 'Git Client'
-      Comment: 'Simple collaboration from your desktop'
-      Icon: 'github-desktop'
-      Type: 'Application'
-      Categories: 'Development;IDE;RevisionControl;'
-      Keywords: 'git;github;version control;development;repository;'
-      MimeType: 'x-scheme-handler/x-github-client;x-scheme-handler/x-github-desktop-auth;x-scheme-handler/x-github-desktop-dev-auth;'
-      StartupNotify: 'true'
-      StartupWMClass: 'github-desktop'
+    Name: 'GitHub Desktop'
+    GenericName: 'Git Client'
+    Comment: 'Simple collaboration from your desktop'
+    Icon: 'github-desktop'
+    Type: 'Application'
+    Categories: 'Development;IDE;RevisionControl;'
+    Keywords: 'git;github;version control;development;repository;'
+    MimeType: 'x-scheme-handler/x-github-client;x-scheme-handler/x-github-desktop-auth;x-scheme-handler/x-github-desktop-dev-auth;'
+    StartupNotify: 'true'
+    StartupWMClass: 'github-desktop'
 
 appImage:
   # systemIntegration is deprecated in newer versions
