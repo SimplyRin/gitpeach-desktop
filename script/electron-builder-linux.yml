@@ -2,9 +2,22 @@ artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
 directories:
   output: 'dist'
 linux:
-  category: 'GNOME;GTK;Development'
-  packageCategory: 'GNOME;GTK;Development'
+  category: 'Development;IDE;VCS'
+  packageCategory: 'Development;IDE;VCS'
   icon: 'app/static/linux/logos'
+  synopsis: 'Simple collaboration from your desktop'
+  description: 'GitHub Desktop is a seamless way to contribute to projects on GitHub and GitHub Enterprise. This cross-platform desktop application simplifies your Git workflow.'
+  desktop:
+    Name: 'GitHub Desktop'
+    GenericName: 'Git client'
+    Comment: 'Simple collaboration from your desktop'
+    Type: Application
+    Categories: 'Development;IDE;VCS;'
+    StartupNotify: true
+    StartupWMClass: 'github-desktop'
+    Keywords: 'git;github;version control;development;'
+    MimeType: 'x-scheme-handler/x-github-client;x-scheme-handler/x-github-desktop-auth;x-scheme-handler/x-github-desktop-dev-auth;'
+  executableName: 'github-desktop'
   mimeTypes:
     - x-scheme-handler/x-github-client
     - x-scheme-handler/x-github-desktop-auth
@@ -26,7 +39,6 @@ linux:
         - x64
         - arm64
   maintainer: 'GitHub Desktop Linux <noreply@github.com>'
-  executableName: 'github-desktop'
 
 appImage:
   # systemIntegration is deprecated in newer versions
@@ -44,7 +56,9 @@ deb:
     - liblzma5
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
-  packageCategory: 'GNOME;GTK;Development'
+  packageCategory: 'Development'
+  priority: 'optional'
+  section: 'devel'
 
 rpm:
   depends:

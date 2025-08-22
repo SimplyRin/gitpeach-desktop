@@ -441,6 +441,24 @@ jobs:
               file "$f" || true
               
               # For AppImage, extract and check the main binary
+              if [[ "$f" == *.deb ]]; then
+                echo "Verifying .deb package contents..."
+                dpkg-deb --contents "$f" | grep -E "(desktop|icons)" || echo "No desktop or icon files found"
+                
+                # Check for specific files
+                if dpkg-deb --contents "$f" | grep -q "usr/share/applications/.*\.desktop"; then
+                  echo "✓ Desktop file found in .deb package"
+                else
+                  echo "✗ Desktop file NOT found in .deb package"
+                fi
+                
+                if dpkg-deb --contents "$f" | grep -q "usr/share/icons"; then
+                  echo "✓ Icon files found in .deb package"
+                else
+                  echo "✗ Icon files NOT found in .deb package"
+                fi
+              fi
+              
               if [[ "$f" == *.AppImage ]]; then
                 echo "Extracting AppImage to verify binary architecture and dependencies..."
                 chmod +x "$f"
