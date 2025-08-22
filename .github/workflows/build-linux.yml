@@ -498,41 +498,6 @@ jobs:
           NODE_ENV: production
           SKIP_POSTINSTALL: 1
 
-      - name: Upload .deb packages
-        uses: actions/upload-artifact@v4
-        if:
-          ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
-          github.event_name == 'workflow_dispatch' }}
-        with:
-          name: github-desktop-linux-deb
-          path: |
-            dist/*.deb
-          retention-days: 30
-          if-no-files-found: ignore
-
-      - name: Upload .rpm packages
-        uses: actions/upload-artifact@v4
-        if:
-          ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
-          github.event_name == 'workflow_dispatch' }}
-        with:
-          name: github-desktop-linux-rpm
-          path: |
-            dist/*.rpm
-          retention-days: 30
-          if-no-files-found: ignore
-
-      - name: Upload AppImages
-        uses: actions/upload-artifact@v4
-        if:
-          ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
-          github.event_name == 'workflow_dispatch' }}
-        with:
-          name: github-desktop-linux-appimage
-          path: |
-            dist/*.AppImage
-          retention-days: 30
-          if-no-files-found: ignore
 
       - name: Upload all Linux packages
         uses: actions/upload-artifact@v4
