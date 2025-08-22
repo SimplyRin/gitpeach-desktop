@@ -45,6 +45,10 @@ deb:
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
   packageCategory: 'GNOME;GTK;Development'
+  # Ensure consistent architecture naming for deb packages
+  architectureMapping:
+    aarch64: arm64
+    x86_64: amd64
 
 rpm:
   depends:
@@ -59,3 +63,6 @@ rpm:
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
   packageCategory: 'GNOME;GTK;Development'
+  # Ensure consistent architecture naming for rpm packages
+  architectureMapping:
+    aarch64: aarch64

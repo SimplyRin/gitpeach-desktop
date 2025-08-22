@@ -140,5 +140,94 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
   console.log(`Successfully found ${allFiles.length} package(s):`)
   allFiles.forEach(file => console.log(`  - ${file}`))
 
-  return Promise.resolve(allFiles)
+  // Rename files to ensure consistent architecture naming (aarch64 -> arm64)
+  const renamedFiles: string[] = []
+  const fs = require('fs')
+  
+  for (const file of allFiles) {
+    let newFileName = file
+    
+    // Replace aarch64 with arm64 in filename for consistency
+    if (file.includes('aarch64')) {
+      newFileName = file.replace(/aarch64/g, 'arm64')
+      console.log(`Renaming ${file} to ${newFileName}`)
+      
+      try {
+        fs.renameSync(file, newFileName)
+        renamedFiles.push(newFileName)
+      } catch (error) {
+        console.log(`Failed to rename ${file}: ${error}`)
+        renamedFiles.push(file) // Keep original if rename fails
+      }
+    } else {
+      renamedFiles.push(file)
+    }
+  }
+
+  // Fix libz.so issues in ARM64 AppImages
+  await fixLibzInAppImages(renamedFiles)
+
+  return Promise.resolve(renamedFiles)
+}
+
+async function fixLibzInAppImages(files: string[]): Promise<void> {
+  const fs = require('fs')
+  const path = require('path')
+  
+  for (const file of files) {
+    if (file.endsWith('.AppImage') && file.includes('arm64')) {
+      console.log(`Fixing libz.so for ARM64 AppImage: ${file}`)
+      
+      try {
+        // Extract AppImage
+        const { spawn } = require('child_process')
+        const extractProcess = spawn(file, ['--appimage-extract'], {
+          stdio: 'pipe',
+          cwd: path.dirname(file)
+        })
+        
+        await new Promise((resolve, reject) => {
+          extractProcess.on('close', (code: number) => {
+            if (code === 0) {
+              resolve(undefined)
+            } else {
+              reject(new Error(`AppImage extraction failed with code ${code}`))
+            }
+          })
+        })
+        
+        const extractedDir = path.join(path.dirname(file), 'squashfs-root')
+        
+        if (fs.existsSync(extractedDir)) {
+          // Copy ARM64 libz.so if it exists
+          const arm64LibDir = '/usr/lib/aarch64-linux-gnu'
+          const libzSourcePath = path.join(arm64LibDir, 'libz.so.1')
+          const libzDestPath = path.join(extractedDir, 'usr', 'lib', 'libz.so.1')
+          
+          if (fs.existsSync(libzSourcePath)) {
+            // Create lib directory if it doesn't exist
+            const libDir = path.dirname(libzDestPath)
+            if (!fs.existsSync(libDir)) {
+              fs.mkdirSync(libDir, { recursive: true })
+            }
+            
+            console.log(`Copying libz.so.1 from ${libzSourcePath} to ${libzDestPath}`)
+            fs.copyFileSync(libzSourcePath, libzDestPath)
+            
+            // Create symlink for libz.so
+            const libzSymlinkPath = path.join(extractedDir, 'usr', 'lib', 'libz.so')
+            if (!fs.existsSync(libzSymlinkPath)) {
+              fs.symlinkSync('./libz.so.1', libzSymlinkPath)
+            }
+          }
+          
+          // Clean up extracted directory
+          const rimraf = require('rimraf')
+          rimraf.sync(extractedDir)
+        }
+      } catch (error) {
+        console.log(`Failed to fix libz.so for ${file}: ${error}`)
+      }
+    }
+  }
 }

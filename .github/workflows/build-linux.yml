@@ -1,4 +1,4 @@
-name: CI / Linux Build (Simplified)
+name: CI / Linux Build
 
 on:
   push:
@@ -183,6 +183,32 @@ jobs:
           echo "Installing ARM64 cross-compilation tools..."
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
+          # Install qemu for ARM64 emulation and testing
+          sudo apt-get install -y qemu-user-static binfmt-support
+
+          # Install ARM64 libraries for cross-compilation
+          echo "Installing ARM64 libraries for AppImage..."
+          sudo apt-get install -y \
+            zlib1g:arm64 \
+            libbz2-1.0:arm64 \
+            liblzma5:arm64 \
+            libzstd1:arm64 \
+            libsecret-1-0:arm64 \
+            libxss1:arm64 \
+            libnss3:arm64 \
+            libasound2:arm64 || echo "Some ARM64 libraries may not be available"
+
+          # Enable multi-arch support for ARM64 packages
+          sudo dpkg --add-architecture arm64 || echo "Multi-arch already enabled or failed"
+          sudo apt-get update || echo "Update after adding architecture failed"
+          
+          # Try to install ARM64 libraries again after enabling multi-arch
+          sudo apt-get install -y \
+            zlib1g:arm64 \
+            libbz2-1.0:arm64 \
+            liblzma5:arm64 \
+            libzstd1:arm64 || echo "ARM64 libraries installation failed, will use system defaults"
+
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
 
@@ -316,12 +342,28 @@ jobs:
           echo "Checking system library availability for AppImage:"
           ldconfig -p | grep -E "(libz|zlib|libbz2|liblzma)" || echo "Some compression libraries may not be found"
           
+          # Additional ARM64 library setup for AppImage
+          echo "Setting up ARM64 libraries for AppImage packaging..."
+          if [ -d "/usr/lib/aarch64-linux-gnu" ]; then
+            echo "ARM64 library directory found, ensuring library availability..."
+            sudo ldconfig
+            
+            # Create additional symlinks for ARM64 libraries
+            sudo ln -sf /usr/lib/aarch64-linux-gnu/libz.so.1 /usr/lib/aarch64-linux-gnu/libz.so 2>/dev/null || true
+            sudo ln -sf /usr/lib/aarch64-linux-gnu/libbz2.so.1.0 /usr/lib/aarch64-linux-gnu/libbz2.so.1 2>/dev/null || true
+            sudo ln -sf /usr/lib/aarch64-linux-gnu/libbz2.so.1.0 /usr/lib/aarch64-linux-gnu/libbz2.so 2>/dev/null || true
+            sudo ln -sf /usr/lib/aarch64-linux-gnu/liblzma.so.5 /usr/lib/aarch64-linux-gnu/liblzma.so 2>/dev/null || true
+            sudo ln -sf /usr/lib/aarch64-linux-gnu/libzstd.so.1 /usr/lib/aarch64-linux-gnu/libzstd.so 2>/dev/null || true
+            
+            echo "ARM64 library symlinks created"
+          fi
+          
           # Run AppImage dependencies fix
           echo "Running AppImage dependencies fix..."
           bash script/fix-appimage-deps.sh || echo "Dependencies fix script failed, continuing..."
           
           # Set library path to include system libraries for electron-builder
-          export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/lib:/lib:$LD_LIBRARY_PATH"
+          export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu:/usr/lib:/lib:$LD_LIBRARY_PATH"
           echo "LD_LIBRARY_PATH set to: $LD_LIBRARY_PATH"
 
           # Check current dist structure
@@ -350,6 +392,18 @@ jobs:
 
           # Package using the TypeScript script (this will build both x64 and ARM64)
           echo "Running packaging script..."
+          
+          # Set environment variables for cross-compilation
+          export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+          export CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++
+          export AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar
+          export STRIP_aarch64_unknown_linux_gnu=aarch64-linux-gnu-strip
+          export PKG_CONFIG_PATH_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig
+          
+          # Set target architecture environment for ARM64 libraries
+          export TARGET_ARCH=multi
+          export ELECTRON_BUILDER_ARCH=both
+          
           if NODE_ENV=production yarn ts-node --transpile-only -P script/tsconfig.json script/package.ts; then
             echo "TypeScript packaging succeeded"
           else
@@ -361,6 +415,12 @@ jobs:
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
+            
+            # Set ARM64 cross-compilation environment for electron-builder
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+            export AR=aarch64-linux-gnu-ar
+            export STRIP=aarch64-linux-gnu-strip
             
             # Try building each target separately for better error isolation
             echo "Building AppImage packages..."
@@ -388,6 +448,19 @@ jobs:
           echo "AppImage files: $(find dist/ -name "*.AppImage" 2>/dev/null | wc -l)"
           echo "DEB files: $(find dist/ -name "*.deb" 2>/dev/null | wc -l)"
           echo "RPM files: $(find dist/ -name "*.rpm" 2>/dev/null | wc -l)"
+          
+          # Verify architecture naming consistency
+          echo "Checking architecture naming consistency:"
+          echo "Files with 'aarch64': $(find dist/ -name "*aarch64*" 2>/dev/null | wc -l)"
+          echo "Files with 'arm64': $(find dist/ -name "*arm64*" 2>/dev/null | wc -l)"
+          echo "Files with 'x64': $(find dist/ -name "*x64*" 2>/dev/null | wc -l)"
+          echo "Files with 'amd64': $(find dist/ -name "*amd64*" 2>/dev/null | wc -l)"
+          
+          # Show specific architecture files
+          echo "ARM64/aarch64 files:"
+          find dist/ -name "*arm64*" -o -name "*aarch64*" 2>/dev/null || echo "No ARM64/aarch64 files found"
+          echo "x64/amd64 files:"
+          find dist/ -name "*x64*" -o -name "*amd64*" 2>/dev/null || echo "No x64/amd64 files found"
 
           # Verify architecture of generated binaries
           echo "Verifying binary architectures..."
@@ -406,13 +479,33 @@ jobs:
                   file squashfs-root/github-desktop || true
                   readelf -h squashfs-root/github-desktop | grep -E "(Class|Machine)" || true
                   
-                  # Check for critical library dependencies
-                  echo "Checking for libz.so dependency in AppImage:"
-                  ldd squashfs-root/github-desktop | grep -E "(libz|zlib)" || echo "libz.so not found in dependencies"
+                  # Detect if this is ARM64 AppImage
+                  if file squashfs-root/github-desktop | grep -q "aarch64"; then
+                    echo "ARM64 AppImage detected - checking ARM64 library dependencies..."
+                    
+                    # For ARM64, we need to use qemu-aarch64 to run ldd properly
+                    if command -v qemu-aarch64 >/dev/null 2>&1; then
+                      echo "Using qemu-aarch64 to check ARM64 dependencies:"
+                      qemu-aarch64 -L /usr/aarch64-linux-gnu /lib/aarch64-linux-gnu/ld-linux-aarch64.so.1 --list squashfs-root/github-desktop | grep -E "(libz|zlib)" || echo "libz.so not found in ARM64 dependencies"
+                    else
+                      echo "qemu-aarch64 not available, cannot check ARM64 runtime dependencies"
+                      echo "Checking if ARM64 libraries are bundled in AppImage:"
+                      find squashfs-root -name "*aarch64*" -o -name "*arm64*" | head -10 || echo "No ARM64 specific paths found"
+                    fi
+                  else
+                    echo "x64 AppImage detected - checking x64 library dependencies..."
+                    # Check for critical library dependencies
+                    echo "Checking for libz.so dependency in AppImage:"
+                    ldd squashfs-root/github-desktop | grep -E "(libz|zlib)" || echo "libz.so not found in dependencies"
+                  fi
                   
                   # List bundled libraries in AppImage
                   echo "Bundled libraries in AppImage:"
                   find squashfs-root -name "*.so*" | grep -E "(libz|zlib|libbz2|liblzma|libzstd)" || echo "No compression libraries found bundled"
+                  
+                  # Check lib directories in AppImage
+                  echo "Library directories in AppImage:"
+                  find squashfs-root -type d -name "*lib*" | head -10 || echo "No lib directories found"
                 fi
                 rm -rf squashfs-root 2>/dev/null || true
               fi
