@@ -27,6 +27,19 @@ linux:
         - arm64
   maintainer: 'GitHub Desktop Linux <noreply@github.com>'
   executableName: 'github-desktop'
+  extraFiles:
+    - from: 'script/resources/github-desktop.desktop'
+      to: 'usr/share/applications/github-desktop.desktop'
+    - from: 'app/static/linux/logos/32x32.png'
+      to: 'usr/share/icons/hicolor/32x32/apps/github-desktop.png'
+    - from: 'app/static/linux/logos/64x64.png'
+      to: 'usr/share/icons/hicolor/64x64/apps/github-desktop.png'
+    - from: 'app/static/linux/logos/128x128.png'
+      to: 'usr/share/icons/hicolor/128x128/apps/github-desktop.png'
+    - from: 'app/static/linux/logos/256x256.png'
+      to: 'usr/share/icons/hicolor/256x256/apps/github-desktop.png'
+    - from: 'app/static/linux/logos/512x512.png'
+      to: 'usr/share/icons/hicolor/512x512/apps/github-desktop.png'
 
 appImage:
   # systemIntegration is deprecated in newer versions
