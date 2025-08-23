@@ -49,6 +49,7 @@ linux:
     # Include ARM64 icon fix script
     - from: 'script/fix-arm64-desktop-icons.sh'
       to: 'usr/lib/github-desktop/fix-arm64-desktop-icons.sh'
+      mode: '0755'
 
 appImage:
   # systemIntegration is deprecated in newer versions
@@ -67,6 +68,9 @@ deb:
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
   packageCategory: 'GNOME;GTK;Development'
+  fpm:
+    - '--deb-recommends=xdg-utils'
+    - '--deb-recommends=desktop-file-utils'
 
 rpm:
   depends:
@@ -81,3 +85,6 @@ rpm:
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
   packageCategory: 'GNOME;GTK;Development'
+  fpm:
+    - '--rpm-recommends=xdg-utils'
+    - '--rpm-recommends=desktop-file-utils'
