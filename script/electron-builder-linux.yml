@@ -40,6 +40,15 @@ linux:
       to: 'usr/share/icons/hicolor/256x256/apps/github-desktop.png'
     - from: 'app/static/linux/logos/512x512.png'
       to: 'usr/share/icons/hicolor/512x512/apps/github-desktop.png'
+    # Add scalable SVG icon if available, or additional PNG icon for better compatibility
+    - from: 'app/static/linux/logos/1024x1024.png'
+      to: 'usr/share/icons/hicolor/1024x1024/apps/github-desktop.png'
+    # Additional icon for pixmaps directory (for older systems)
+    - from: 'app/static/linux/logos/64x64.png'
+      to: 'usr/share/pixmaps/github-desktop.png'
+    # Include ARM64 icon fix script
+    - from: 'script/fix-arm64-desktop-icons.sh'
+      to: 'usr/lib/github-desktop/fix-arm64-desktop-icons.sh'
 
 appImage:
   # systemIntegration is deprecated in newer versions

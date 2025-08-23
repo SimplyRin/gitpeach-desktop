@@ -10,3 +10,15 @@ Keywords=git;github;version control;development;repository;
 MimeType=x-scheme-handler/x-github-client;x-scheme-handler/x-github-desktop-auth;x-scheme-handler/x-github-desktop-dev-auth;
 StartupNotify=true
 StartupWMClass=github-desktop
+Terminal=false
+X-GNOME-SingleWindow=true
+NoDisplay=false
+Actions=new-repo;clone-repo;
+
+[Desktop Action new-repo]
+Name=Create New Repository
+Exec=github-desktop --new-repo
+
+[Desktop Action clone-repo]
+Name=Clone Repository
+Exec=github-desktop --clone-repo
