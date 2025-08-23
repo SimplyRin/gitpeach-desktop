@@ -292,6 +292,11 @@ jobs:
           # Set environment variables
           export NODE_ENV=production
           export CI=true
+          
+          # Enable GitHub Releases for updates in production builds
+          export USE_GITHUB_RELEASES=true
+          export GITHUB_RELEASES_OWNER=SimplyRin
+          export GITHUB_RELEASES_REPO=desktop
 
           # Verify Git is available for dugite
           echo "Git version: $(git --version)"
@@ -322,6 +327,9 @@ jobs:
           TS_NODE_TRANSPILE_ONLY: true
           SKIP_POSTINSTALL: 1
           CI: true
+          USE_GITHUB_RELEASES: true
+          GITHUB_RELEASES_OWNER: SimplyRin
+          GITHUB_RELEASES_REPO: desktop
 
       - name: Package Linux application
         run: |

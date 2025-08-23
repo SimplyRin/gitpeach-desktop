@@ -41,6 +41,31 @@ chmod +x GitHubDesktop-linux-x86_64-*.AppImage
 ./GitHubDesktop-linux-x86_64-*.AppImage
 ```
 
+### Automatic Updates from GitHub Releases
+
+This fork supports automatic updates from GitHub Releases (non-beta versions only). To enable this feature:
+
+1. **Environment Configuration**: Set the following environment variables:
+   ```bash
+   export USE_GITHUB_RELEASES=true
+   export GITHUB_RELEASES_OWNER=SimplyRin
+   export GITHUB_RELEASES_REPO=desktop
+   ```
+
+2. **Build-time Configuration**: When building from source, you can use the `.env.github-releases` file:
+   ```bash
+   cp .env.github-releases .env
+   yarn build:prod
+   ```
+
+3. **Features**:
+   - Automatic update checking (for production and beta builds)
+   - Update notifications in the app
+   - Download and install latest releases from SimplyRin/desktop
+   - Compatible with AppImage, .deb, and .rpm packages
+
+**Note**: The automatic update feature is only available for non-beta/development builds and requires internet connectivity to check for updates.
+
 <picture>
   <source
     srcset="https://user-images.githubusercontent.com/634063/202742848-63fa1488-6254-49b5-af7c-96a6b50ea8af.png"
