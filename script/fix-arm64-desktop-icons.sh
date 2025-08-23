@@ -112,14 +112,22 @@ create_icon_symlinks() {
             echo "Created pixmaps symlink"
         fi
         
-        # Create additional symlinks for common locations
-        for alt_path in "/usr/share/icons/gnome" "/usr/share/icons/Adwaita"; do
+        # Create additional symlinks for common locations and Ubuntu 24.04 themes
+        for alt_path in "/usr/share/icons/gnome" "/usr/share/icons/Adwaita" "/usr/share/icons/Yaru" "/usr/share/icons/ubuntu-mono-dark" "/usr/share/icons/ubuntu-mono-light"; do
             if [ -d "$alt_path" ]; then
                 mkdir -p "$alt_path/48x48/apps" 2>/dev/null || true
                 ln -sf "$BEST_ICON" "$alt_path/48x48/apps/github-desktop.png" 2>/dev/null || true
+                
+                mkdir -p "$alt_path/64x64/apps" 2>/dev/null || true
+                ln -sf "$BEST_ICON" "$alt_path/64x64/apps/github-desktop.png" 2>/dev/null || true
+                
                 echo "Created symlink in $alt_path"
             fi
         done
+        
+        # Create fallback in /usr/share/icons for direct access
+        mkdir -p "/usr/share/icons/github-desktop" 2>/dev/null || true
+        ln -sf "$BEST_ICON" "/usr/share/icons/github-desktop/github-desktop.png" 2>/dev/null || true
     else
         echo "No suitable icon found for symlinking"
     fi

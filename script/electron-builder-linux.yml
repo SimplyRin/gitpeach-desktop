@@ -50,6 +50,11 @@ linux:
     - from: 'script/fix-arm64-desktop-icons.sh'
       to: 'usr/lib/github-desktop/fix-arm64-desktop-icons.sh'
       mode: '0755'
+    # Ubuntu 24.04 Yaru theme compatibility
+    - from: 'app/static/linux/logos/64x64.png'
+      to: 'usr/share/icons/Yaru/64x64/apps/github-desktop.png'
+    - from: 'app/static/linux/logos/64x64.png'
+      to: 'usr/share/icons/Yaru/48x48/apps/github-desktop.png'
 
 appImage:
   # systemIntegration is deprecated in newer versions
@@ -65,6 +70,8 @@ deb:
     - zlib1g
     - libbz2-1.0
     - liblzma5
+    - desktop-file-utils
+    - shared-mime-info
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
   packageCategory: 'GNOME;GTK;Development'
