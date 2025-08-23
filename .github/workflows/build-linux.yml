@@ -239,9 +239,24 @@ jobs:
           echo "Installing root dependencies..."
           yarn install --frozen-lockfile --no-progress || yarn install --no-progress
 
-          # Force install the correct electron-builder version
+          # Force install the correct electron-builder version and lock it
           echo "Installing specific electron-builder version..."
           yarn add electron-builder@25.1.8 --dev --exact
+          
+          # Add resolutions to package.json to prevent version conflicts
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.resolutions = pkg.resolutions || {};
+            pkg.resolutions['electron-builder'] = '25.1.8';
+            pkg.resolutions['**/electron-builder'] = '25.1.8';
+            pkg.resolutions['string-width'] = '^4.2.3';
+            pkg.resolutions['yargs/string-width'] = '^4.2.3';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+          
+          # Reinstall to apply resolutions
+          yarn install --force
 
           # Ensure @types/node is installed for TypeScript compilation
           echo "Installing @types/node for TypeScript support..."
@@ -397,15 +412,21 @@ jobs:
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.resolutions = pkg.resolutions || {};
+            pkg.resolutions['electron-builder'] = '25.1.8';
+            pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
-            pkg.resolutions['electron-builder/yargs/string-width'] = '^4.2.3';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
-          # Reinstall to apply resolutions
+          # Reinstall to apply resolutions and ensure correct version
           echo "Reinstalling with dependency resolutions..."
           yarn install --ignore-scripts --force || true
+          
+          # Verify electron-builder version
+          echo "Verifying electron-builder version..."
+          yarn list electron-builder || true
+          npx electron-builder --version || true
 
           # Package using the TypeScript script (this will build both x64 and ARM64)
           echo "Running packaging script..."

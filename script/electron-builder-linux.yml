@@ -91,6 +91,3 @@ rpm:
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
   packageCategory: 'GNOME;GTK;Development'
-  fpm:
-    - '--rpm-recommends=xdg-utils'
-    - '--rpm-recommends=desktop-file-utils'
