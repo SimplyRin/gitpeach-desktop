@@ -30,9 +30,8 @@ done
 # Create library symlinks if needed
 echo "Creating library symlinks for AppImage packaging..."
 
-# Standard library locations for both x64 and ARM64
+# Standard library locations for x64 only
 lib_dirs_x64=("/usr/lib/x86_64-linux-gnu" "/lib/x86_64-linux-gnu" "/usr/lib" "/lib")
-lib_dirs_arm64=("/usr/lib/aarch64-linux-gnu" "/lib/aarch64-linux-gnu" "/usr/lib" "/lib")
 
 create_symlink_if_needed() {
     local src="$1"
@@ -78,34 +77,14 @@ fix_libraries_for_arch() {
     done
 }
 
-# Fix libraries for x64 architecture
+# Fix libraries for x64 architecture only
 echo "Fixing x64 libraries..."
 fix_libraries_for_arch "${lib_dirs_x64[@]}"
 
-# Fix libraries for ARM64 architecture if targeting ARM64 or if ARM64 libs are available
-if [ "$TARGET_ARCH" = "aarch64" ] || [ "$TARGET_ARCH" = "arm64" ] || [ -d "/usr/lib/aarch64-linux-gnu" ]; then
-    echo "Fixing ARM64 libraries..."
-    fix_libraries_for_arch "${lib_dirs_arm64[@]}"
-fi
-
-# Set environment variables for electron-builder
-export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib/aarch64-linux-gnu:/usr/lib:/lib:${LD_LIBRARY_PATH:-}"
+# Set environment variables for electron-builder (x64 only)
+export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu:/usr/lib:/lib:${LD_LIBRARY_PATH:-}"
 
 echo "LD_LIBRARY_PATH set to: $LD_LIBRARY_PATH"
-
-# Also set environment for cross-compilation
-if [ "$TARGET_ARCH" = "aarch64" ] || [ "$TARGET_ARCH" = "arm64" ]; then
-    export CC=aarch64-linux-gnu-gcc
-    export CXX=aarch64-linux-gnu-g++
-    export AR=aarch64-linux-gnu-ar
-    export STRIP=aarch64-linux-gnu-strip
-    export PKG_CONFIG_PATH="/usr/lib/aarch64-linux-gnu/pkgconfig:${PKG_CONFIG_PATH:-}"
-    
-    echo "Cross-compilation environment set:"
-    echo "CC=$CC"
-    echo "CXX=$CXX"
-    echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-fi
 
 # Verify libraries are now accessible
 echo "Final library check:"
@@ -116,17 +95,5 @@ for lib in "${libs_to_check[@]}"; do
         echo "⚠ $lib may still not be accessible"
     fi
 done
-
-# Check for ARM64 specific libraries if available
-if [ -d "/usr/lib/aarch64-linux-gnu" ]; then
-    echo "ARM64 library check:"
-    for lib in "${libs_to_check[@]}"; do
-        if find /usr/lib/aarch64-linux-gnu /lib/aarch64-linux-gnu -name "$lib" 2>/dev/null | grep -q "$lib"; then
-            echo "✓ ARM64 $lib found"
-        else
-            echo "⚠ ARM64 $lib not found"
-        fi
-    done
-fi
 
 echo "=== Dependencies fix completed ==="

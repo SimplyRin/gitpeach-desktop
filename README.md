@@ -13,7 +13,6 @@ This fork is specifically configured for Linux distributions and provides automa
 
 ### Available Packages
 
-- **AppImage** (`.AppImage`) - Universal Linux package
 - **Debian/Ubuntu** (`.deb`) - For Debian-based distributions  
 - **Red Hat/Fedora** (`.rpm`) - For Red Hat-based distributions
 
@@ -31,14 +30,6 @@ sudo apt install ./GitHubDesktop-linux-amd64-*.deb
 # Download and install the .rpm package  
 wget https://github.com/SimplyRin/desktop/releases/latest/download/GitHubDesktop-linux-x86_64-*.rpm
 sudo rpm -i GitHubDesktop-linux-x86_64-*.rpm
-```
-
-#### AppImage (Universal)
-```bash
-# Download and run AppImage
-wget https://github.com/SimplyRin/desktop/releases/latest/download/GitHubDesktop-linux-x86_64-*.AppImage
-chmod +x GitHubDesktop-linux-x86_64-*.AppImage
-./GitHubDesktop-linux-x86_64-*.AppImage
 ```
 
 ### Automatic Updates from GitHub Releases
@@ -62,7 +53,7 @@ This fork supports automatic updates from GitHub Releases (non-beta versions onl
    - Automatic update checking (for production and beta builds)
    - Update notifications in the app
    - Download and install latest releases from SimplyRin/desktop
-   - Compatible with AppImage, .deb, and .rpm packages
+   - Compatible with .deb, and .rpm packages
 
 **Note**: The automatic update feature is only available for non-beta/development builds and requires internet connectivity to check for updates.
 
@@ -85,7 +76,6 @@ This repository contains specific patches on top of the upstream
 
 It also publishes [releases](https://github.com/shiftkey/desktop/releases) for various Linux distributions:
 
- - AppImage (`.AppImage`)
  - Debian (`.deb`)
  - RPM (`.rpm`)
 
@@ -194,7 +184,7 @@ Arch Linux users can install GitHub Desktop from the [AUR](https://aur.archlinux
 
 ### Cross-Distribution Packages
 
-GitHub Desktop is also available cross-platform as a [Flatpak](https://github.com/flathub/io.github.shiftey.Desktop) and [AppImage](https://appimage.github.io/GitHubDesktop/).
+GitHub Desktop is also available cross-platform as a [Flatpak](https://github.com/flathub/io.github.shiftey.Desktop).
 
 ### deb-get
 

@@ -235,21 +235,21 @@ async function packageLinux() {
     console.log('Building all Linux packages with electron-builder...')
     const allPackages = await packageElectronBuilder()
 
-    // electron-builder now handles AppImage, deb, and rpm packages
+    // electron-builder now handles deb, and rpm packages
     // so we don't need separate packageDebian() and packageRedhat() calls
-    
+
     console.log('Generating checksums...')
     await generateChecksums(allPackages)
 
     return allPackages
   } catch (error) {
     console.error('Linux packaging failed:', error)
-    
+
     // Fallback: try individual packaging if electron-builder fails
     try {
       console.log('Attempting fallback packaging...')
       const files: string[] = []
-      
+
       // Try building individual packages
       console.log('Building Debian package...')
       try {
@@ -275,7 +275,7 @@ async function packageLinux() {
     } catch (fallbackError) {
       console.error('Fallback packaging also failed:', fallbackError)
     }
-    
+
     throw error
   }
 }

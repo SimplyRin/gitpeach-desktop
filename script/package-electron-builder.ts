@@ -17,12 +17,8 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
 
   // Define all target combinations
   const targets = [
-    { arch: '--x64', target: 'AppImage' },
     { arch: '--x64', target: 'deb' },
     { arch: '--x64', target: 'rpm' },
-    { arch: '--arm64', target: 'AppImage' },
-    { arch: '--arm64', target: 'deb' },
-    { arch: '--arm64', target: 'rpm' },
   ]
 
   // Try multiple approaches to find electron-builder - prioritize local version
@@ -95,9 +91,8 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     )
   }
 
-  // Find all generated packages (AppImage, deb, rpm) for all architectures
+  // Find all generated packages (deb, rpm) for all architectures
   const patterns = [
-    `${distRoot}/GitHubDesktop-linux-*.AppImage`,
     `${distRoot}/GitHubDesktop-*.deb`,
     `${distRoot}/GitHubDesktop-*.rpm`,
   ]
