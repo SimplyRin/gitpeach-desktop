@@ -452,13 +452,17 @@ jobs:
             echo "TypeScript packaging succeeded"
           else
             echo "TypeScript execution failed, trying alternative..."
-            # Fallback to direct electron-builder execution
+            # Fallback to direct electron-builder execution - ensure correct version
             echo "Installing specific electron-builder version..."
-            yarn add electron-builder@25.1.8 --dev --exact || npm install -g electron-builder@25.1.8 || true
+            yarn remove electron-builder || true
+            yarn add electron-builder@25.1.8 --dev --exact || true
             
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
+            
+            # Verify version before building
+            echo "Using electron-builder version: $(npx electron-builder --version)"
             
             # Set ARM64 cross-compilation environment for electron-builder
             export CC_arm64=aarch64-linux-gnu-gcc
@@ -648,23 +652,26 @@ jobs:
 
           # Process all files and detect architecture from filename
           for dir in */; do
-            cd "$dir"
+            cd "$dir" 2>/dev/null || continue
             for file in *.{deb,rpm,AppImage,tar.gz}; do
               if [ -f "$file" ]; then
-                filename=$(basename "$file")
+                original_filename=$(basename "$file")
+                # Rename aarch64 to arm64 for display consistency
+                display_filename=$(echo "$original_filename" | sed 's/aarch64/arm64/g')
+                
                 md5_hash=$(md5sum "$file" | cut -d ' ' -f 1)
                 sha256_hash=$(sha256sum "$file" | cut -d ' ' -f 1)
                 
                 # Detect architecture from filename
-                if [[ "$filename" == *"amd64"* ]] || [[ "$filename" == *"x86_64"* ]]; then
+                if [[ "$display_filename" == *"amd64"* ]] || [[ "$display_filename" == *"x86_64"* ]]; then
                   arch="x64"
-                elif [[ "$filename" == *"arm64"* ]] || [[ "$filename" == *"aarch64"* ]]; then
+                elif [[ "$display_filename" == *"arm64"* ]]; then
                   arch="ARM64"
                 else
                   arch="unknown"
                 fi
                 
-                echo "| [$filename](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.RELEASE_TAG }}/$filename) | $arch | \`$md5_hash\` | \`$sha256_hash\` |" >> ../checksums.md
+                echo "| [$display_filename](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.RELEASE_TAG }}/$display_filename) | $arch | \`$md5_hash\` | \`$sha256_hash\` |" >> ../checksums.md
               fi
             done
             cd ..
@@ -700,7 +707,7 @@ jobs:
             ### Red Hat/Fedora (.rpm)
             Download the appropriate .rpm file for your architecture:
             - **x64**: GitHubDesktop-*-x86_64.rpm
-            - **ARM64**: GitHubDesktop-*-aarch64.rpm
+            - **ARM64**: GitHubDesktop-*-arm64.rpm
 
             Install with:
             ```bash
@@ -733,8 +740,18 @@ jobs:
           # Find all package files
           find . -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" | while read file; do
             if [ -f "$file" ]; then
-              asset_name=$(basename "$file")
-              echo "Uploading: $asset_name"
+              original_name=$(basename "$file")
+              
+              # Rename aarch64 to arm64 in filename for consistency
+              asset_name=$(echo "$original_name" | sed 's/aarch64/arm64/g')
+              
+              echo "Uploading: $original_name as $asset_name"
+              
+              # Create renamed copy if filename changed
+              if [ "$original_name" != "$asset_name" ]; then
+                cp "$file" "$asset_name"
+                file="$asset_name"
+              fi
               
               # Determine content type
               case "$asset_name" in

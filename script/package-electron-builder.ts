@@ -25,7 +25,7 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     { arch: '--arm64', target: 'rpm' },
   ]
 
-  // Try multiple approaches to find electron-builder
+  // Try multiple approaches to find electron-builder - prioritize local version
   let electronBuilder = path.resolve(
     __dirname,
     '..',
@@ -34,12 +34,13 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     'electron-builder'
   )
 
-  // Check if the binary exists, if not try alternatives
+  // Check if the binary exists, if not try yarn execution
   if (!require('fs').existsSync(electronBuilder)) {
     console.log(
       'electron-builder binary not found at expected path, trying alternatives...'
     )
-    electronBuilder = 'npx'
+    // Use yarn to run the specific version we installed
+    electronBuilder = 'yarn'
   }
 
   const configPath = path.resolve(__dirname, 'electron-builder-linux.yml')
@@ -52,8 +53,9 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     )
 
     const args =
-      electronBuilder === 'npx'
+      electronBuilder === 'yarn'
         ? [
+            'run',
             'electron-builder',
             'build',
             '--prepackaged',

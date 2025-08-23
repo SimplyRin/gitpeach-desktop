@@ -20,6 +20,7 @@
     "build:dev": "yarn compile:dev && cross-env NODE_ENV=development ts-node -P script/tsconfig.json script/build.ts",
     "build:prod": "yarn compile:prod && cross-env NODE_ENV=production ts-node -P script/tsconfig.json script/build.ts",
     "package": "ts-node -P script/tsconfig.json script/package.ts",
+    "electron-builder": "electron-builder",
     "generate-octicons": "ts-node -P script/tsconfig.json script/generate-octicons.ts",
     "compile:script": "tsc -P script/tsconfig.json",
     "lint": "yarn prettier && yarn lint:src",
@@ -55,7 +56,10 @@
     "minimatch": "^3.0.5",
     "@types/minimatch": "^3.0.5",
     "@types/react-addons-transition-group/@types/react": "^16.14.62",
-    "@types/react": "^16.14.62"
+    "@types/react": "^16.14.62",
+    "electron-builder": "25.1.8",
+    "string-width": "^4.2.3",
+    "yargs/string-width": "^4.2.3"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.25.0",
@@ -177,9 +181,6 @@
     "electron-installer-debian": "3.2.0",
     "electron-installer-redhat": "3.4.0",
     "electron-winstaller": "^5.0.0"
-  },
-  "resolutions": {
-    "electron-builder": "25.1.8"
   },
   "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }
