@@ -199,21 +199,24 @@ jobs:
           EOF
           
           # Update package lists after adding ARM64 sources
-          sudo apt-get update
+          sudo apt-get update || echo "Update with some errors, continuing..."
 
           # Install ARM64 libraries with updated package names for Ubuntu 24.04
           echo "Installing ARM64 libraries for AppImage..."
-          sudo apt-get install -y \
-            zlib1g:arm64 \
-            libbz2-1.0:arm64 \
-            liblzma5:arm64 \
-            libzstd1:arm64 \
-            libsecret-1-0:arm64 \
-            libxss1:arm64 \
-            libnss3:arm64 \
-            libasound2t64:arm64 || {
-              echo "Some ARM64 libraries failed to install, trying alternatives..."
-              # Try with alternative package names for Ubuntu 24.04
+          # Try installing ARM64 libraries, but don't fail if some are missing
+          {
+            sudo apt-get install -y \
+              zlib1g:arm64 \
+              libbz2-1.0:arm64 \
+              liblzma5:arm64 \
+              libzstd1:arm64 \
+              libsecret-1-0:arm64 \
+              libxss1:arm64 \
+              libnss3:arm64 \
+              libasound2t64:arm64
+          } || {
+            echo "Some ARM64 libraries failed to install, trying alternatives..."
+            {
               sudo apt-get install -y \
                 zlib1g:arm64 \
                 libbz2-1.0:arm64 \
@@ -222,11 +225,13 @@ jobs:
                 libsecret-1-0:arm64 \
                 libxss1:arm64 \
                 libnss3:arm64 \
-                libasound2:arm64 || echo "ARM64 libraries installation failed, will use system defaults"
-            }
+                libasound2:arm64
+            } || echo "ARM64 libraries installation failed, continuing without them"
+          }
 
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
+        continue-on-error: true
 
       - name: Install dependencies
         run: |
