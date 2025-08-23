@@ -86,7 +86,7 @@ jobs:
         continue-on-error: true
 
   build-linux:
-    name: Build Linux Packages (x64 + ARM64)
+    name: Build Linux Packages
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -186,7 +186,22 @@ jobs:
           # Install qemu for ARM64 emulation and testing
           sudo apt-get install -y qemu-user-static binfmt-support
 
-          # Install ARM64 libraries for cross-compilation
+          # Enable multi-arch support for ARM64 packages BEFORE trying to install ARM64 packages
+          echo "Enabling ARM64 architecture support..."
+          sudo dpkg --add-architecture arm64
+          
+          # Add ARM64 repository sources manually for Ubuntu 24.04
+          echo "Adding ARM64 repository sources..."
+          cat <<EOF | sudo tee /etc/apt/sources.list.d/arm64.list
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ noble main universe
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ noble-updates main universe
+          deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ noble-security main universe
+          EOF
+          
+          # Update package lists after adding ARM64 sources
+          sudo apt-get update
+
+          # Install ARM64 libraries with updated package names for Ubuntu 24.04
           echo "Installing ARM64 libraries for AppImage..."
           sudo apt-get install -y \
             zlib1g:arm64 \
@@ -196,18 +211,19 @@ jobs:
             libsecret-1-0:arm64 \
             libxss1:arm64 \
             libnss3:arm64 \
-            libasound2:arm64 || echo "Some ARM64 libraries may not be available"
-
-          # Enable multi-arch support for ARM64 packages
-          sudo dpkg --add-architecture arm64 || echo "Multi-arch already enabled or failed"
-          sudo apt-get update || echo "Update after adding architecture failed"
-          
-          # Try to install ARM64 libraries again after enabling multi-arch
-          sudo apt-get install -y \
-            zlib1g:arm64 \
-            libbz2-1.0:arm64 \
-            liblzma5:arm64 \
-            libzstd1:arm64 || echo "ARM64 libraries installation failed, will use system defaults"
+            libasound2t64:arm64 || {
+              echo "Some ARM64 libraries failed to install, trying alternatives..."
+              # Try with alternative package names for Ubuntu 24.04
+              sudo apt-get install -y \
+                zlib1g:arm64 \
+                libbz2-1.0:arm64 \
+                liblzma5:arm64 \
+                libzstd1:arm64 \
+                libsecret-1-0:arm64 \
+                libxss1:arm64 \
+                libnss3:arm64 \
+                libasound2:arm64 || echo "ARM64 libraries installation failed, will use system defaults"
+            }
 
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
@@ -217,6 +233,10 @@ jobs:
           # Install root dependencies
           echo "Installing root dependencies..."
           yarn install --frozen-lockfile --no-progress || yarn install --no-progress
+
+          # Force install the correct electron-builder version
+          echo "Installing specific electron-builder version..."
+          yarn add electron-builder@25.1.8 --dev --exact
 
           # Ensure @types/node is installed for TypeScript compilation
           echo "Installing @types/node for TypeScript support..."
@@ -396,23 +416,33 @@ jobs:
           export TARGET_ARCH=multi
           export ELECTRON_BUILDER_ARCH=both
           
+          # Set cross-compilation environment for native modules
+          export CC=gcc
+          export CXX=g++
+          export AR=ar
+          export STRIP=strip
+          
           if NODE_ENV=production yarn ts-node --transpile-only -P script/tsconfig.json script/package.ts; then
             echo "TypeScript packaging succeeded"
           else
             echo "TypeScript execution failed, trying alternative..."
             # Fallback to direct electron-builder execution
             echo "Installing specific electron-builder version..."
-            npm install -g electron-builder@25.1.8 || true
+            yarn add electron-builder@25.1.8 --dev --exact || npm install -g electron-builder@25.1.8 || true
             
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
             
             # Set ARM64 cross-compilation environment for electron-builder
-            export CC=aarch64-linux-gnu-gcc
-            export CXX=aarch64-linux-gnu-g++
-            export AR=aarch64-linux-gnu-ar
-            export STRIP=aarch64-linux-gnu-strip
+            export CC_arm64=aarch64-linux-gnu-gcc
+            export CXX_arm64=aarch64-linux-gnu-g++
+            export AR_arm64=aarch64-linux-gnu-ar
+            export STRIP_arm64=aarch64-linux-gnu-strip
+            export CC_aarch64=aarch64-linux-gnu-gcc
+            export CXX_aarch64=aarch64-linux-gnu-g++
+            export AR_aarch64=aarch64-linux-gnu-ar
+            export STRIP_aarch64=aarch64-linux-gnu-strip
             
             # Try building each target separately for better error isolation
             echo "Building AppImage packages..."

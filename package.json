@@ -162,7 +162,7 @@
     "@types/xml2js": "^0.4.11",
     "diff": "^7.0.0",
     "electron": "36.1.0",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "25.1.8",
     "electron-packager": "^17.1.2",
     "electron-winstaller": "^5.0.0",
     "eslint-plugin-github": "^5.1.5",
@@ -177,6 +177,9 @@
     "electron-installer-debian": "3.2.0",
     "electron-installer-redhat": "3.4.0",
     "electron-winstaller": "^5.0.0"
+  },
+  "resolutions": {
+    "electron-builder": "25.1.8"
   },
   "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }
