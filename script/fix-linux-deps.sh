@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Fix Linux dependencies script  
-# This script ensures critical libraries are available for Linux packaging (deb/rpm)
+# Fix Linux dependencies script
+# This script ensures critical libraries are available for Linux packaging
 
 set -e
 
@@ -9,7 +9,6 @@ echo "=== Linux Dependencies Fix ==="
 
 # Detect target architecture (x64 only)
 ARCH=$(uname -m)
-
 echo "Host architecture: $ARCH"
 
 # Check for essential libraries
@@ -41,7 +40,7 @@ create_symlink_if_needed() {
     fi
 }
 
-# Function to fix libraries for specific architecture
+# Function to fix libraries for x64 architecture
 fix_libraries_for_arch() {
     local arch_dirs=("$@")
     
