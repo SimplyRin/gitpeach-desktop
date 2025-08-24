@@ -179,7 +179,7 @@ jobs:
           sudo apt-get install -y python3 python3-pip build-essential
 
           # Install additional tools for electron-builder packaging
-          sudo apt-get install -y fakeroot dpkg rpm
+          sudo apt-get install -y fakeroot dpkg
 
           # Install snapcraft for snap packaging
           sudo snap install snapcraft --classic
@@ -190,6 +190,10 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Clean yarn cache to prevent manifest corruption
+          echo "Cleaning yarn cache..."
+          yarn cache clean
+
           # Install root dependencies
           echo "Installing root dependencies..."
           yarn install --frozen-lockfile --no-progress || yarn install --no-progress
@@ -207,6 +211,9 @@ jobs:
             pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
+            pkg.resolutions['webpack'] = '^5.0.0';
+            pkg.resolutions['**/webpack'] = '^5.0.0';
+            pkg.resolutions['parallel-webpack/webpack'] = '^5.0.0';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
@@ -341,7 +348,7 @@ jobs:
           export PATH="$GIT_EXEC_PATH:$PATH"
           echo "Git exec path: $GIT_EXEC_PATH"
 
-          # Ensure system libraries are available for deb/rpm packaging
+          # Ensure system libraries are available for deb/snap packaging
           echo "Checking system library availability:"
           ldconfig -p | grep -E "(libz|zlib|libbz2|liblzma)" || echo "Some compression libraries may not be found"
 
@@ -382,13 +389,21 @@ jobs:
             pkg.resolutions['cliui/string-width'] = '^4.2.3';
             pkg.resolutions['wrap-ansi'] = '^7.0.0';
             pkg.resolutions['**/wrap-ansi'] = '^7.0.0';
+            pkg.resolutions['webpack'] = '^5.0.0';
+            pkg.resolutions['**/webpack'] = '^5.0.0';
+            pkg.resolutions['parallel-webpack/webpack'] = '^5.0.0';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
           # Install dependencies using only yarn (avoid mixing yarn and npm)
           echo "Installing electron-builder and dependencies with yarn..."
+          
+          # Clean cache before installing electron-builder to prevent manifest errors
+          yarn cache clean
+          
           yarn add electron-builder@25.1.8 string-width@^4.2.3 --dev --exact || {
             echo "Yarn install failed, trying with --force"
+            yarn cache clean
             yarn add electron-builder@25.1.8 string-width@^4.2.3 --dev --exact --force
           }
 
@@ -512,7 +527,7 @@ jobs:
           done
 
           # Size sanity check - packages should be > 100MB
-          for f in dist/*.{deb,rpm,snap}; do
+          for f in dist/*.{deb,snap}; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "0")
               size_mb=$((size / 1024 / 1024))
@@ -610,7 +625,7 @@ jobs:
           # Process all files and detect architecture from filename
           for dir in */; do
             cd "$dir" 2>/dev/null || continue
-            for file in *.{deb,rpm,snap}; do
+            for file in *.{deb,snap}; do
               if [ -f "$file" ]; then
                 original_filename=$(basename "$file")
                 display_filename="$original_filename"
@@ -657,15 +672,6 @@ jobs:
             sudo apt install ./RinGitPeachDesktop-*.deb
             ```
 
-            ### Red Hat/Fedora (.rpm)
-            Download the .rpm file for x64:
-            - **x64**: RinGitPeachDesktop-*-x86_64.rpm
-
-            Install with:
-            ```bash
-            sudo rpm -i RinGitPeachDesktop-*.rpm
-            ```
-
             ### Ubuntu Snap (.snap)
             Download the .snap file for x64:
             - **x64**: RinGitPeachDesktop-*-amd64.snap
@@ -691,8 +697,8 @@ jobs:
         run: |
           cd dist-artifacts
 
-          # Find all package files (deb, rpm, and snap)
-          find . -name "*.deb" -o -name "*.rpm" -o -name "*.snap" | while read file; do
+          # Find all package files (deb and snap)
+          find . -name "*.deb" -o -name "*.snap" | while read file; do
             if [ -f "$file" ]; then
               original_name=$(basename "$file")
               asset_name="$original_name"
@@ -703,9 +709,6 @@ jobs:
               case "$asset_name" in
                 *.deb)
                   content_type="application/vnd.debian.binary-package"
-                  ;;
-                *.rpm)
-                  content_type="application/x-rpm"
                   ;;
                 *.snap)
                   content_type="application/vnd.snap"
