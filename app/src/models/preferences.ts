@@ -1,5 +1,4 @@
 export enum PreferencesTab {
-  Accounts,
   Integrations,
   Git,
   Appearance,
