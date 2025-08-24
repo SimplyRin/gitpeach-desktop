@@ -191,6 +191,11 @@ jobs:
           echo "Installing specific electron-builder version..."
           yarn add electron-builder@25.1.8 --dev --exact
 
+          # Verify electron-builder is accessible after installation
+          echo "Verifying electron-builder installation..."
+          ls -la node_modules/.bin/electron-builder || echo "electron-builder binary not found after installation"
+          yarn list electron-builder || echo "electron-builder not found in package list"
+
           # Add resolutions to package.json to prevent version conflicts
           node -e "
             const fs = require('fs');
@@ -205,6 +210,17 @@ jobs:
 
           # Reinstall to apply resolutions
           yarn install --force
+
+          # Final verification of electron-builder
+          echo "Final verification of electron-builder..."
+          if [ -f "node_modules/.bin/electron-builder" ]; then
+            echo "electron-builder binary found at: $(realpath node_modules/.bin/electron-builder)"
+            node_modules/.bin/electron-builder --version || echo "electron-builder execution failed"
+          else
+            echo "ERROR: electron-builder binary still not found"
+            echo "Attempting global installation as fallback..."
+            npm install -g electron-builder@25.1.8 || true
+          fi
 
           # Ensure @types/node is installed for TypeScript compilation
           echo "Installing @types/node for TypeScript support..."
@@ -383,28 +399,55 @@ jobs:
           export TARGET_ARCH=x64
           export ELECTRON_BUILDER_ARCH=x64
 
+          # First ensure electron-builder is properly installed and accessible
+          echo "Ensuring electron-builder is available..."
+          
+          # Remove any conflicting versions and install the specific version
+          yarn remove electron-builder || true
+          yarn add electron-builder@25.1.8 --dev --exact
+          
+          # Verify installation and accessibility
+          echo "Checking electron-builder accessibility..."
+          ls -la node_modules/.bin/electron-builder || echo "electron-builder binary not found in node_modules/.bin/"
+          yarn list electron-builder || echo "electron-builder not in yarn list"
+          
+          # Try different ways to access electron-builder
+          if [ -f "node_modules/.bin/electron-builder" ]; then
+            echo "Found electron-builder in node_modules/.bin/"
+            ELECTRON_BUILDER_CMD="./node_modules/.bin/electron-builder"
+          elif command -v npx > /dev/null; then
+            echo "Using npx to access electron-builder"
+            ELECTRON_BUILDER_CMD="npx electron-builder"
+          elif yarn list | grep -q electron-builder; then
+            echo "Using yarn to run electron-builder"
+            ELECTRON_BUILDER_CMD="yarn electron-builder"
+          else
+            echo "electron-builder not accessible, installing globally as fallback"
+            npm install -g electron-builder@25.1.8
+            ELECTRON_BUILDER_CMD="electron-builder"
+          fi
+          
+          echo "Will use electron-builder command: $ELECTRON_BUILDER_CMD"
+          
+          # Test the command works
+          $ELECTRON_BUILDER_CMD --version || echo "electron-builder version check failed"
+
+          # Try TypeScript packaging first
           if NODE_ENV=production yarn ts-node --transpile-only -P script/tsconfig.json script/package.ts; then
             echo "TypeScript packaging succeeded"
           else
-            echo "TypeScript execution failed, trying alternative..."
-            # Fallback to direct electron-builder execution - ensure correct version
-            echo "Installing specific electron-builder version..."
-            yarn remove electron-builder || true
-            yarn add electron-builder@25.1.8 --dev --exact || true
+            echo "TypeScript execution failed, building with electron-builder directly..."
             
-            echo "Building packages with electron-builder..."
+            echo "Building all Linux packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
             
-            # Verify version before building
-            echo "Using electron-builder version: $(npx electron-builder --version)"
-            
-            # Try building each target separately for better error isolation
+            # Build deb and snap packages using the working electron-builder command
             echo "Building deb packages..."
-            npx electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
+            $ELECTRON_BUILDER_CMD --linux deb --x64 --prepackaged dist/github-desktop-linux-x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
             
             echo "Building snap packages..."
-            npx electron-builder --linux snap --x64 --config script/electron-builder-linux.yml --publish=never || echo "snap build failed"
+            $ELECTRON_BUILDER_CMD --linux snap --x64 --prepackaged dist/github-desktop-linux-x64 --config script/electron-builder-linux.yml --publish=never || echo "snap build failed"
             
             echo "Packaging completed"
           fi

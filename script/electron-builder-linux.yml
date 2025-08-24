@@ -68,20 +68,6 @@ deb:
     - '--deb-recommends=xdg-utils'
     - '--deb-recommends=desktop-file-utils'
 
-rpm:
-  depends:
-    - git
-    - libsecret
-    - libXScrnSaver
-    - nss
-    - alsa-lib
-    - zlib
-    - bzip2-libs
-    - xz-libs
-  afterInstall: 'script/linux-after-install.sh'
-  afterRemove: 'script/linux-after-remove.sh'
-  packageCategory: 'GNOME;GTK;Development'
-
 snap:
   category: 'Development'
   summary: 'Simple Git collaboration from your desktop'
