@@ -198,17 +198,11 @@ jobs:
           echo "Installing root dependencies..."
           yarn install --frozen-lockfile --no-progress || yarn install --no-progress
 
-          # Force install the correct electron-builder version and lock it
-          echo "Installing specific electron-builder version..."
-          yarn add electron-builder@25.1.8 --dev --exact
-
-          # Add resolutions to package.json to prevent version conflicts
+          # Add resolutions to package.json to prevent version conflicts (but don't install electron-builder yet)
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.resolutions = pkg.resolutions || {};
-            pkg.resolutions['electron-builder'] = '25.1.8';
-            pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
             pkg.resolutions['webpack'] = '^5.0.0';
@@ -216,9 +210,6 @@ jobs:
             pkg.resolutions['parallel-webpack/webpack'] = '^5.0.0';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
-
-          # Reinstall to apply resolutions
-          yarn install --force
 
           # Ensure @types/node is installed for TypeScript compilation
           echo "Installing @types/node for TypeScript support..."
@@ -395,24 +386,21 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
-          # Install dependencies using only yarn (avoid mixing yarn and npm)
-          echo "Installing electron-builder and dependencies with yarn..."
-          
-          # Clean cache before installing electron-builder to prevent manifest errors
-          yarn cache clean
-          
-          yarn add electron-builder@25.1.8 string-width@^4.2.3 --dev --exact || {
-            echo "Yarn install failed, trying with --force"
-            yarn cache clean
-            yarn add electron-builder@25.1.8 string-width@^4.2.3 --dev --exact --force
+          # Install dependencies using npm instead of yarn for electron-builder (avoids manifest corruption)
+          echo "Installing electron-builder and dependencies with npm..."
+
+          # Remove any existing node_modules/.bin entries for electron-builder
+          rm -rf node_modules/.bin/electron-builder* || true
+
+          # Use npm to install electron-builder to avoid yarn cache corruption
+          npm install electron-builder@25.1.8 string-width@^4.2.3 --save-dev --exact --no-audit --no-fund || {
+            echo "npm install failed, trying with --force"
+            npm install electron-builder@25.1.8 string-width@^4.2.3 --save-dev --exact --force --no-audit --no-fund
           }
 
-          # Reinstall to apply resolutions
-          echo "Reinstalling with dependency resolutions..."
-          yarn install --ignore-scripts --force || {
-            echo "Force install failed, trying without force"
-            yarn install --ignore-scripts
-          }
+          # Verify packages are installed correctly
+          echo "Verifying installation..."
+          npm list electron-builder || echo "electron-builder not found in npm list"
 
           # Verify string-width is available
           echo "Checking string-width availability..."
@@ -420,7 +408,7 @@ jobs:
 
           # Verify electron-builder version and dependencies
           echo "Verifying electron-builder version..."
-          yarn list electron-builder || true
+          npm list electron-builder || true
 
           # Check electron-builder binary and make sure it's accessible
           echo "Checking electron-builder binary..."
@@ -428,21 +416,17 @@ jobs:
             echo "electron-builder binary found"
             # Test with a simple version check
             NODE_PATH=./node_modules node_modules/.bin/electron-builder --version || {
-              echo "Version check failed, trying yarn global install as fallback"
-              # If version check fails, install globally with yarn as fallback
-              echo "Installing electron-builder globally with yarn as fallback..."
-              yarn global add electron-builder@25.1.8 || {
-                echo "Yarn global install failed, clearing cache and retrying..."
-                yarn cache clean
-                yarn add electron-builder@25.1.8 --dev --exact --force
+              echo "Version check failed, trying npx as fallback"
+              # If version check fails, use npx as fallback
+              echo "Using npx electron-builder as fallback..."
+              npx electron-builder --version || {
+                echo "npx also failed, trying global npm install"
+                npm install -g electron-builder@25.1.8 --force
               }
             }
           else
-            echo "electron-builder binary not found, installing globally with yarn"
-            yarn global add electron-builder@25.1.8 || {
-              echo "Global yarn install failed, forcing local install..."
-              yarn add electron-builder@25.1.8 --dev --exact --force
-            }
+            echo "electron-builder binary not found, installing globally with npm"
+            npm install -g electron-builder@25.1.8 --force
           fi          # Package using the TypeScript script (this will build x64 only)
           echo "Running packaging script..."
 
@@ -470,11 +454,9 @@ jobs:
             
             echo "Using packaged directory: $PACKAGED_DIR"
             
-            # Determine electron-builder command (prefer yarn over npx/npm)
+            # Determine electron-builder command (prefer local npm install over yarn)
             if [ -f "node_modules/.bin/electron-builder" ]; then
               ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules ./node_modules/.bin/electron-builder"
-            elif yarn global list | grep -q electron-builder; then
-              ELECTRON_BUILDER_CMD="yarn electron-builder"
             elif command -v npx >/dev/null 2>&1; then
               ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules npx electron-builder"
             elif command -v electron-builder >/dev/null 2>&1; then
