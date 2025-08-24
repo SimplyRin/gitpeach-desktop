@@ -289,10 +289,6 @@ export class Preferences extends React.Component<
             type={TabBarType.Vertical}
           >
             <span id={this.getTabId(PreferencesTab.Integrations)}>
-              <Octicon className="icon" symbol={octicons.home} />
-              Accounts
-            </span>
-            <span id={this.getTabId(PreferencesTab.Integrations)}>
               <Octicon className="icon" symbol={octicons.person} />
               Integrations
             </span>
