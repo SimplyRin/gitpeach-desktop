@@ -97,7 +97,7 @@ snap:
     * Conflict resolution
     * Commit history visualization
     * Pull request support
-    
+
     Perfect for developers who want a beautiful graphical interface for Git operations.
   grade: 'stable'
   confinement: 'strict'

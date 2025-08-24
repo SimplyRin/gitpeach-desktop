@@ -25,7 +25,7 @@ export function getExecutableName() {
   if (process.platform === 'win32') {
     return `${getWindowsIdentifierName()}${suffix}`
   } else if (process.platform === 'linux') {
-    return `github-desktop${suffix}`
+    return `rin-gitpeach-desktop${suffix}`
   } else {
     return productName
   }
@@ -140,7 +140,7 @@ export function getUpdatesURL() {
     const repo = process.env.GITHUB_RELEASES_REPO || 'desktop'
     return `https://api.github.com/repos/${owner}/${repo}/releases/latest`
   }
-  
+
   // Original central.github.com endpoint
   const architecturePath = getDistArchitecture() === 'arm64' ? 'arm64/' : ''
   return `https://central.github.com/api/deployments/desktop/desktop/${architecturePath}latest?version=${version}&env=${getChannel()}`

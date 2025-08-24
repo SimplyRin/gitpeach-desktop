@@ -353,12 +353,27 @@ jobs:
           echo "Current dist content before packaging:"
           ls -la dist/ || echo "No dist directory yet"
 
-          # Verify the packaged electron app exists
+          # Verify the packaged electron app exists (check both possible names)
           echo "Checking packaged app structure:"
-          ls -la "dist/github-desktop-linux-x64/" || echo "Packaged app directory not found"
+          if [ -d "dist/rin-gitpeach-desktop-linux-x64/" ]; then
+            echo "Found rin-gitpeach-desktop-linux-x64 directory"
+            ls -la "dist/rin-gitpeach-desktop-linux-x64/"
+          elif [ -d "dist/github-desktop-linux-x64/" ]; then
+            echo "Found github-desktop-linux-x64 directory (old naming)"
+            ls -la "dist/github-desktop-linux-x64/"
+          else
+            echo "Packaged app directory not found, listing all contents:"
+            ls -la dist/
+          fi
 
           # Fix electron-builder yargs dependency chain issue
           echo "Fixing electron-builder dependency conflicts..."
+
+          # Install string-width and related dependencies explicitly
+          echo "Installing missing dependencies..."
+          yarn add string-width@^4.2.3 --dev || npm install string-width@^4.2.3 --save-dev
+          yarn add electron-builder@25.1.8 --dev --exact
+
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -366,7 +381,9 @@ jobs:
             pkg.resolutions['electron-builder'] = '25.1.8';
             pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
+            pkg.resolutions['**/string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
+            pkg.resolutions['cliui/string-width'] = '^4.2.3';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
@@ -374,10 +391,27 @@ jobs:
           echo "Reinstalling with dependency resolutions..."
           yarn install --ignore-scripts --force || true
 
-          # Verify electron-builder version
+          # Manually install string-width in electron-builder if still missing
+          if [ ! -f "node_modules/string-width/index.js" ]; then
+            echo "Installing string-width manually..."
+            cd node_modules && npm install string-width@^4.2.3 && cd ..
+          fi
+
+          # Verify electron-builder version and dependencies
           echo "Verifying electron-builder version..."
           yarn list electron-builder || true
-          npx electron-builder --version || true
+          echo "Checking string-width availability..."
+          node -e "try { require('string-width'); console.log('string-width found'); } catch(e) { console.log('string-width missing'); }"
+
+          # Check electron-builder binary and make sure it's accessible
+          echo "Checking electron-builder binary..."
+          if [ -f "node_modules/.bin/electron-builder" ]; then
+            echo "electron-builder binary found"
+            NODE_PATH=./node_modules ./node_modules/.bin/electron-builder --version || echo "Version check failed"
+          else
+            echo "electron-builder binary not found, installing globally"
+            npm install -g electron-builder@25.1.8 string-width@^4.2.3
+          fi
 
           # Package using the TypeScript script (this will build x64 only)
           echo "Running packaging script..."
@@ -390,28 +424,49 @@ jobs:
           if NODE_ENV=production yarn ts-node --transpile-only -P script/tsconfig.json script/package.ts; then
             echo "TypeScript packaging succeeded"
           else
-            echo "TypeScript execution failed, trying alternative..."
-            # Fallback to direct electron-builder execution - ensure correct version
-            echo "Installing specific electron-builder version..."
-            yarn remove electron-builder || true
-            yarn add electron-builder@25.1.8 --dev --exact || true
+            echo "TypeScript execution failed, trying electron-builder directly..."
+            
+            # Determine which packaged directory exists
+            PACKAGED_DIR=""
+            if [ -d "dist/rin-gitpeach-desktop-linux-x64" ]; then
+              PACKAGED_DIR="dist/rin-gitpeach-desktop-linux-x64"
+            elif [ -d "dist/github-desktop-linux-x64" ]; then
+              PACKAGED_DIR="dist/github-desktop-linux-x64"
+            else
+              echo "ERROR: No packaged directory found"
+              ls -la dist/
+              exit 1
+            fi
+            
+            echo "Using packaged directory: $PACKAGED_DIR"
+            
+            # Determine electron-builder command
+            if [ -f "node_modules/.bin/electron-builder" ]; then
+              ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules ./node_modules/.bin/electron-builder"
+            elif command -v npx >/dev/null 2>&1; then
+              ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules npx electron-builder"
+            elif command -v electron-builder >/dev/null 2>&1; then
+              ELECTRON_BUILDER_CMD="electron-builder"
+            else
+              echo "ERROR: electron-builder not found anywhere"
+              exit 1
+            fi
+            
+            echo "Using electron-builder command: $ELECTRON_BUILDER_CMD"
             
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
             
-            # Verify version before building
-            echo "Using electron-builder version: $(npx electron-builder --version)"
-            
             # Try building each target separately for better error isolation
             echo "Building deb packages..."
-            npx electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
+            $ELECTRON_BUILDER_CMD --linux deb --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
             
             echo "Building rpm packages..."
-            npx electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
+            $ELECTRON_BUILDER_CMD --linux rpm --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
 
             echo "Building snap packages..."
-            npx electron-builder --linux snap --x64 --config script/electron-builder-linux.yml --publish=never || echo "snap build failed"
+            $ELECTRON_BUILDER_CMD --linux snap --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "snap build failed"
             
             echo "Packaging completed"
           fi
@@ -424,11 +479,15 @@ jobs:
           echo "All files in dist directory:"
           find dist/ -type f -name "*" 2>/dev/null || echo "Could not list dist files"
 
-          # Check for specific package types
+          # Check for specific package types (support both naming patterns)
           echo "Looking for specific package types:"
           echo "DEB files: $(find dist/ -name "*.deb" 2>/dev/null | wc -l)"
           echo "RPM files: $(find dist/ -name "*.rpm" 2>/dev/null | wc -l)"
           echo "SNAP files: $(find dist/ -name "*.snap" 2>/dev/null | wc -l)"
+
+          # Show actual package files found
+          echo "Package files found:"
+          find dist/ -name "*.deb" -o -name "*.rpm" -o -name "*.snap" 2>/dev/null || echo "No package files found"
 
           # Verify architecture of generated binaries
           echo "Verifying binary architectures..."
