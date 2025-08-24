@@ -73,7 +73,7 @@ snap:
   summary: 'Simple Git collaboration from your desktop'
   description: |
     GitHub Desktop for Linux - Simple Git collaboration from your desktop.
-    
+
     Features include:
     * Visual Git workflow
     * GitHub integration 
@@ -81,7 +81,7 @@ snap:
     * Conflict resolution
     * Commit history visualization
     * Pull request support
-    
+
     Perfect for developers who want a graphical interface for Git operations.
   grade: 'stable'
   confinement: 'strict'

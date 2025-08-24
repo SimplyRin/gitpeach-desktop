@@ -1,4 +1,4 @@
-name: github-desktop-linux
+name: rin-github-desktop-linux
 base: core22
 version: '3.5.3'
 summary: Simple Git collaboration from your desktop
@@ -19,13 +19,13 @@ grade: stable
 confinement: strict
 
 slots:
-  github-desktop-linux:
+  rin-github-desktop-linux:
     interface: dbus
     bus: session
     name: com.github.GitHubDesktop
 
 apps:
-  github-desktop-linux:
+  rin-github-desktop-linux:
     command: usr/bin/github-desktop
     common-id: com.github.GitHubDesktop
     desktop: usr/share/applications/github-desktop.desktop
@@ -98,7 +98,7 @@ parts:
 
     organize:
       # Organize the application files from the electron build output
-      'github-desktop-linux-x64/': usr/bin/
+      'rin-github-desktop-linux-x64/': usr/bin/
 
     override-build: |
       craftctl default
@@ -111,8 +111,8 @@ parts:
       mkdir -p $CRAFTCTL_PART_INSTALL/usr/share/icons/hicolor/256x256/apps
 
       # Copy application files if they exist
-      if [ -d "$CRAFTCTL_PART_SRC/github-desktop-linux-x64" ]; then
-        cp -r "$CRAFTCTL_PART_SRC/github-desktop-linux-x64"/* $CRAFTCTL_PART_INSTALL/usr/bin/
+      if [ -d "$CRAFTCTL_PART_SRC/rin-github-desktop-linux-x64" ]; then
+        cp -r "$CRAFTCTL_PART_SRC/rin-github-desktop-linux-x64"/* $CRAFTCTL_PART_INSTALL/usr/bin/
       fi
 
       # Copy desktop file from the build context

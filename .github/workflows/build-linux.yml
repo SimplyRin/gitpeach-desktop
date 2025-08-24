@@ -401,16 +401,16 @@ jobs:
 
           # First ensure electron-builder is properly installed and accessible
           echo "Ensuring electron-builder is available..."
-          
+
           # Remove any conflicting versions and install the specific version
           yarn remove electron-builder || true
           yarn add electron-builder@25.1.8 --dev --exact
-          
+
           # Verify installation and accessibility
           echo "Checking electron-builder accessibility..."
           ls -la node_modules/.bin/electron-builder || echo "electron-builder binary not found in node_modules/.bin/"
           yarn list electron-builder || echo "electron-builder not in yarn list"
-          
+
           # Try different ways to access electron-builder
           if [ -f "node_modules/.bin/electron-builder" ]; then
             echo "Found electron-builder in node_modules/.bin/"
@@ -426,9 +426,9 @@ jobs:
             npm install -g electron-builder@25.1.8
             ELECTRON_BUILDER_CMD="electron-builder"
           fi
-          
+
           echo "Will use electron-builder command: $ELECTRON_BUILDER_CMD"
-          
+
           # Test the command works
           $ELECTRON_BUILDER_CMD --version || echo "electron-builder version check failed"
 
@@ -631,7 +631,7 @@ jobs:
 
             Or install directly from Ubuntu Store (once published):
             ```bash
-            sudo snap install github-desktop-linux
+            sudo snap install rin-github-desktop-linux
             ```
 
             ## Architecture Detection
