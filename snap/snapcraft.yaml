@@ -1,0 +1,138 @@
+name: github-desktop-linux
+base: core22
+version: '3.5.3'
+summary: Simple Git collaboration from your desktop
+description: |
+  GitHub Desktop for Linux is a simple, intuitive Git client that makes version 
+  control accessible to everyone. Features include:
+
+  * Visual Git workflow
+  * GitHub integration
+  * Branch management
+  * Conflict resolution
+  * Commit history visualization
+  * Pull request support
+
+  Perfect for developers who want a graphical interface for Git operations.
+
+grade: stable
+confinement: strict
+
+slots:
+  github-desktop-linux:
+    interface: dbus
+    bus: session
+    name: com.github.GitHubDesktop
+
+apps:
+  github-desktop-linux:
+    command: usr/bin/github-desktop
+    common-id: com.github.GitHubDesktop
+    desktop: usr/share/applications/github-desktop.desktop
+    environment:
+      # Electron/Chromium flags for better compatibility
+      DISABLE_WAYLAND: 1
+      ELECTRON_TRASH: gio
+      # Git configuration
+      GIT_EXEC_PATH: $SNAP/usr/lib/git-core
+    plugs:
+      # Network access for Git operations and GitHub integration
+      - network
+      - network-bind
+      # File system access
+      - home
+      - removable-media
+      # Desktop integration
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - unity7
+      # Audio/video (for notifications)
+      - audio-playback
+      - pulseaudio
+      # System integration
+      - gsettings
+      - opengl
+      # SSH keys and credentials
+      - ssh-keys
+      - password-manager-service
+      # System information
+      - system-observe
+      - hardware-observe
+
+parts:
+  github-desktop:
+    plugin: dump
+    source: dist/
+    source-type: local
+    stage-packages:
+      # Git and related tools
+      - git
+      - git-lfs
+      - openssh-client
+
+      # System libraries
+      - libnss3
+      - libxss1
+      - libxtst6
+      - libxrandr2
+      - libasound2
+      - libpangocairo-1.0-0
+      - libatk1.0-0
+      - libcairo-gobject2
+      - libgtk-3-0
+      - libgdk-pixbuf2.0-0
+
+      # Additional dependencies for Electron
+      - libdrm2
+      - libxcomposite1
+      - libxdamage1
+      - libxfixes3
+
+      # Compression libraries
+      - zlib1g
+      - libbz2-1.0
+      - liblzma5
+      - libzstd1
+
+    organize:
+      # Organize the application files from the electron build output
+      'github-desktop-linux-x64/': usr/bin/
+
+    override-build: |
+      craftctl default
+
+      # Create necessary directories
+      mkdir -p $CRAFTCTL_PART_INSTALL/usr/bin
+      mkdir -p $CRAFTCTL_PART_INSTALL/usr/share/applications
+      mkdir -p $CRAFTCTL_PART_INSTALL/usr/share/icons/hicolor/64x64/apps
+      mkdir -p $CRAFTCTL_PART_INSTALL/usr/share/icons/hicolor/128x128/apps
+      mkdir -p $CRAFTCTL_PART_INSTALL/usr/share/icons/hicolor/256x256/apps
+
+      # Copy application files if they exist
+      if [ -d "$CRAFTCTL_PART_SRC/github-desktop-linux-x64" ]; then
+        cp -r "$CRAFTCTL_PART_SRC/github-desktop-linux-x64"/* $CRAFTCTL_PART_INSTALL/usr/bin/
+      fi
+
+      # Copy desktop file from the build context
+      if [ -f "../script/resources/github-desktop.desktop" ]; then
+        cp "../script/resources/github-desktop.desktop" $CRAFTCTL_PART_INSTALL/usr/share/applications/
+      fi
+
+      # Copy icons from the app build
+      for size in 64x64 128x128 256x256; do
+        if [ -f "../app/static/linux/logos/$size.png" ]; then
+          cp "../app/static/linux/logos/$size.png" \
+             $CRAFTCTL_PART_INSTALL/usr/share/icons/hicolor/$size/apps/github-desktop.png
+        fi
+      done
+
+      # Make the main executable file executable
+      if [ -f "$CRAFTCTL_PART_INSTALL/usr/bin/github-desktop" ]; then
+        chmod +x $CRAFTCTL_PART_INSTALL/usr/bin/github-desktop
+      fi
+
+layout:
+  /usr/lib/git-core:
+    bind: $SNAP/usr/lib/git-core

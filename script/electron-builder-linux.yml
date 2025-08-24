@@ -16,11 +16,9 @@ linux:
     - target: deb
       arch:
         - x64
-        - arm64
-    - target: rpm
+    - target: snap
       arch:
         - x64
-        - arm64
   maintainer: 'GitHub Desktop Linux <noreply@github.com>'
   executableName: 'github-desktop'
   extraFiles:
@@ -83,3 +81,65 @@ rpm:
   afterInstall: 'script/linux-after-install.sh'
   afterRemove: 'script/linux-after-remove.sh'
   packageCategory: 'GNOME;GTK;Development'
+
+snap:
+  category: 'Development'
+  summary: 'Simple Git collaboration from your desktop'
+  description: |
+    GitHub Desktop for Linux - Simple Git collaboration from your desktop.
+    
+    Features include:
+    * Visual Git workflow
+    * GitHub integration 
+    * Branch management
+    * Conflict resolution
+    * Commit history visualization
+    * Pull request support
+    
+    Perfect for developers who want a graphical interface for Git operations.
+  grade: 'stable'
+  confinement: 'strict'
+  base: 'core22'
+  stagePackages:
+    - git
+    - git-lfs
+    - openssh-client
+    - libnss3
+    - libxss1
+    - libxtst6
+    - libxrandr2
+    - libasound2
+    - libpangocairo-1.0-0
+    - libatk1.0-0
+    - libcairo-gobject2
+    - libgtk-3-0
+    - libgdk-pixbuf2.0-0
+    - libdrm2
+    - libxcomposite1
+    - libxdamage1
+    - libxfixes3
+    - zlib1g
+    - libbz2-1.0
+    - liblzma5
+    - libzstd1
+  plugs:
+    - network
+    - network-bind
+    - home
+    - removable-media
+    - desktop
+    - desktop-legacy
+    - wayland
+    - x11
+    - unity7
+    - audio-playback
+    - pulseaudio
+    - gsettings
+    - opengl
+    - ssh-keys
+    - password-manager-service
+    - system-observe
+    - hardware-observe
+  environment:
+    DISABLE_WAYLAND: 1
+    ELECTRON_TRASH: gio
