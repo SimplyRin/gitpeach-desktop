@@ -17,10 +17,6 @@ linux:
       arch:
         - x64
         - arm64
-    - target: rpm
-      arch:
-        - x64
-        - arm64
     - target: snap
       arch:
         - x64
@@ -69,20 +65,6 @@ deb:
   fpm:
     - '--deb-recommends=xdg-utils'
     - '--deb-recommends=desktop-file-utils'
-
-rpm:
-  depends:
-    - git
-    - libsecret
-    - libXScrnSaver
-    - nss
-    - alsa-lib
-    - zlib
-    - bzip2-libs
-    - xz-libs
-  afterInstall: 'script/linux-after-install.sh'
-  afterRemove: 'script/linux-after-remove.sh'
-  packageCategory: 'GNOME;GTK;Development'
 
 snap:
   category: 'Development'

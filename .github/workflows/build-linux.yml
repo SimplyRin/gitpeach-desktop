@@ -369,11 +369,7 @@ jobs:
           # Fix electron-builder yargs dependency chain issue
           echo "Fixing electron-builder dependency conflicts..."
 
-          # Install string-width and related dependencies explicitly
-          echo "Installing missing dependencies..."
-          yarn add string-width@^4.2.3 --dev || npm install string-width@^4.2.3 --save-dev
-          yarn add electron-builder@25.1.8 --dev --exact
-
+          # First, ensure we have the correct resolutions in package.json
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -384,36 +380,55 @@ jobs:
             pkg.resolutions['**/string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
             pkg.resolutions['cliui/string-width'] = '^4.2.3';
+            pkg.resolutions['wrap-ansi'] = '^7.0.0';
+            pkg.resolutions['**/wrap-ansi'] = '^7.0.0';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
-          # Reinstall to apply resolutions and ensure correct version
-          echo "Reinstalling with dependency resolutions..."
-          yarn install --ignore-scripts --force || true
+          # Install dependencies using only yarn (avoid mixing yarn and npm)
+          echo "Installing electron-builder and dependencies with yarn..."
+          yarn add electron-builder@25.1.8 string-width@^4.2.3 --dev --exact || {
+            echo "Yarn install failed, trying with --force"
+            yarn add electron-builder@25.1.8 string-width@^4.2.3 --dev --exact --force
+          }
 
-          # Manually install string-width in electron-builder if still missing
-          if [ ! -f "node_modules/string-width/index.js" ]; then
-            echo "Installing string-width manually..."
-            cd node_modules && npm install string-width@^4.2.3 && cd ..
-          fi
+          # Reinstall to apply resolutions
+          echo "Reinstalling with dependency resolutions..."
+          yarn install --ignore-scripts --force || {
+            echo "Force install failed, trying without force"
+            yarn install --ignore-scripts
+          }
+
+          # Verify string-width is available
+          echo "Checking string-width availability..."
+          node -e "try { require('string-width'); console.log('string-width found'); } catch(e) { console.log('string-width missing:', e.message); }"
 
           # Verify electron-builder version and dependencies
           echo "Verifying electron-builder version..."
           yarn list electron-builder || true
-          echo "Checking string-width availability..."
-          node -e "try { require('string-width'); console.log('string-width found'); } catch(e) { console.log('string-width missing'); }"
 
           # Check electron-builder binary and make sure it's accessible
           echo "Checking electron-builder binary..."
           if [ -f "node_modules/.bin/electron-builder" ]; then
             echo "electron-builder binary found"
-            NODE_PATH=./node_modules ./node_modules/.bin/electron-builder --version || echo "Version check failed"
+            # Test with a simple version check
+            NODE_PATH=./node_modules node_modules/.bin/electron-builder --version || {
+              echo "Version check failed, trying yarn global install as fallback"
+              # If version check fails, install globally with yarn as fallback
+              echo "Installing electron-builder globally with yarn as fallback..."
+              yarn global add electron-builder@25.1.8 || {
+                echo "Yarn global install failed, clearing cache and retrying..."
+                yarn cache clean
+                yarn add electron-builder@25.1.8 --dev --exact --force
+              }
+            }
           else
-            echo "electron-builder binary not found, installing globally"
-            npm install -g electron-builder@25.1.8 string-width@^4.2.3
-          fi
-
-          # Package using the TypeScript script (this will build x64 only)
+            echo "electron-builder binary not found, installing globally with yarn"
+            yarn global add electron-builder@25.1.8 || {
+              echo "Global yarn install failed, forcing local install..."
+              yarn add electron-builder@25.1.8 --dev --exact --force
+            }
+          fi          # Package using the TypeScript script (this will build x64 only)
           echo "Running packaging script..."
 
           # Remove cross-compilation environment variables (ARM64 not needed)
@@ -440,9 +455,11 @@ jobs:
             
             echo "Using packaged directory: $PACKAGED_DIR"
             
-            # Determine electron-builder command
+            # Determine electron-builder command (prefer yarn over npx/npm)
             if [ -f "node_modules/.bin/electron-builder" ]; then
               ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules ./node_modules/.bin/electron-builder"
+            elif yarn global list | grep -q electron-builder; then
+              ELECTRON_BUILDER_CMD="yarn electron-builder"
             elif command -v npx >/dev/null 2>&1; then
               ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules npx electron-builder"
             elif command -v electron-builder >/dev/null 2>&1; then
@@ -458,14 +475,11 @@ jobs:
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
             
-            # Try building each target separately for better error isolation
+            # Build packages for Ubuntu Store (.deb and .snap only, no .rpm)
             echo "Building deb packages..."
             $ELECTRON_BUILDER_CMD --linux deb --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
             
-            echo "Building rpm packages..."
-            $ELECTRON_BUILDER_CMD --linux rpm --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
-
-            echo "Building snap packages..."
+            echo "Building snap packages for Ubuntu Store..."
             $ELECTRON_BUILDER_CMD --linux snap --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "snap build failed"
             
             echo "Packaging completed"
@@ -479,19 +493,18 @@ jobs:
           echo "All files in dist directory:"
           find dist/ -type f -name "*" 2>/dev/null || echo "Could not list dist files"
 
-          # Check for specific package types (support both naming patterns)
+          # Check for specific package types (only .deb and .snap for Ubuntu Store)
           echo "Looking for specific package types:"
           echo "DEB files: $(find dist/ -name "*.deb" 2>/dev/null | wc -l)"
-          echo "RPM files: $(find dist/ -name "*.rpm" 2>/dev/null | wc -l)"
           echo "SNAP files: $(find dist/ -name "*.snap" 2>/dev/null | wc -l)"
 
           # Show actual package files found
           echo "Package files found:"
-          find dist/ -name "*.deb" -o -name "*.rpm" -o -name "*.snap" 2>/dev/null || echo "No package files found"
+          find dist/ -name "*.deb" -o -name "*.snap" 2>/dev/null || echo "No package files found"
 
           # Verify architecture of generated binaries
           echo "Verifying binary architectures..."
-          for f in dist/*.{deb,rpm,snap}; do
+          for f in dist/*.{deb,snap}; do
             if [ -f "$f" ]; then
               echo "Checking $f:"
               file "$f" || true
@@ -513,7 +526,7 @@ jobs:
           NODE_ENV: production
           SKIP_POSTINSTALL: 1
 
-      - name: Upload Linux packages (deb, rpm, and snap)
+      - name: Upload Linux packages (deb and snap for Ubuntu Store)
         uses: actions/upload-artifact@v4
         if:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
@@ -522,7 +535,6 @@ jobs:
           name: rin-gitpeach-desktop-linux-x64-packages
           path: |
             dist/*.deb
-            dist/*.rpm
             dist/*.snap
           retention-days: 30
           if-no-files-found: ignore
@@ -533,7 +545,7 @@ jobs:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-checksums
+          name: rin-gitpeach-desktop-linux-checksums
           path: |
             dist/*.sha256
             dist/checksums.txt
