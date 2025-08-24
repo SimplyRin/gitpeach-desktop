@@ -3,7 +3,6 @@ import { Account, isDotComAccount } from '../../models/account'
 import { PreferencesTab } from '../../models/preferences'
 import { Dispatcher } from '../dispatcher'
 import { TabBar, TabBarType } from '../tab-bar'
-import { Accounts } from './accounts'
 import { Advanced } from './advanced'
 import { Git } from './git'
 import { assertNever } from '../../lib/fatal-error'
@@ -155,7 +154,8 @@ export class Preferences extends React.Component<
     super(props)
 
     this.state = {
-      selectedIndex: this.props.initialSelectedTab || PreferencesTab.Accounts,
+      selectedIndex:
+        this.props.initialSelectedTab || PreferencesTab.Integrations,
       committerName: '',
       committerEmail: '',
       defaultBranch: '',
@@ -288,7 +288,7 @@ export class Preferences extends React.Component<
             selectedIndex={this.state.selectedIndex}
             type={TabBarType.Vertical}
           >
-            <span id={this.getTabId(PreferencesTab.Accounts)}>
+            <span id={this.getTabId(PreferencesTab.Integrations)}>
               <Octicon className="icon" symbol={octicons.home} />
               Accounts
             </span>
@@ -332,9 +332,6 @@ export class Preferences extends React.Component<
   private getTabId = (tab: PreferencesTab) => {
     let suffix
     switch (tab) {
-      case PreferencesTab.Accounts:
-        suffix = 'accounts'
-        break
       case PreferencesTab.Integrations:
         suffix = 'integrations'
         break
@@ -390,16 +387,6 @@ export class Preferences extends React.Component<
     const index = this.state.selectedIndex
     let View
     switch (index) {
-      case PreferencesTab.Accounts:
-        View = (
-          <Accounts
-            accounts={this.props.accounts}
-            onDotComSignIn={this.onDotComSignIn}
-            onEnterpriseSignIn={this.onEnterpriseSignIn}
-            onLogout={this.onLogout}
-          />
-        )
-        break
       case PreferencesTab.Integrations: {
         View = (
           <Integrations
