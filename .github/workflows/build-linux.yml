@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - development-linux
+      - development-linux-snapstore
       - main
       - linux
       - 'linux-release-*'
@@ -13,6 +14,7 @@ on:
   pull_request:
     branches:
       - development-linux
+      - development-linux-snapstore
       - main
       - linux
       - 'linux-release-*'
@@ -178,6 +180,9 @@ jobs:
 
           # Install additional tools for electron-builder packaging
           sudo apt-get install -y fakeroot dpkg rpm
+
+          # Install snapcraft for snap packaging
+          sudo snap install snapcraft --classic
 
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
@@ -404,6 +409,9 @@ jobs:
             
             echo "Building rpm packages..."
             npx electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
+
+            echo "Building snap packages..."
+            npx electron-builder --linux snap --x64 --config script/electron-builder-linux.yml --publish=never || echo "snap build failed"
             
             echo "Packaging completed"
           fi
@@ -420,10 +428,11 @@ jobs:
           echo "Looking for specific package types:"
           echo "DEB files: $(find dist/ -name "*.deb" 2>/dev/null | wc -l)"
           echo "RPM files: $(find dist/ -name "*.rpm" 2>/dev/null | wc -l)"
+          echo "SNAP files: $(find dist/ -name "*.snap" 2>/dev/null | wc -l)"
 
           # Verify architecture of generated binaries
           echo "Verifying binary architectures..."
-          for f in dist/*.{deb,rpm}; do
+          for f in dist/*.{deb,rpm,snap}; do
             if [ -f "$f" ]; then
               echo "Checking $f:"
               file "$f" || true
@@ -431,7 +440,7 @@ jobs:
           done
 
           # Size sanity check - packages should be > 100MB
-          for f in dist/*.{deb,rpm}; do
+          for f in dist/*.{deb,rpm,snap}; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "0")
               size_mb=$((size / 1024 / 1024))
@@ -445,16 +454,17 @@ jobs:
           NODE_ENV: production
           SKIP_POSTINSTALL: 1
 
-      - name: Upload Linux packages (deb and rpm only)
+      - name: Upload Linux packages (deb, rpm, and snap)
         uses: actions/upload-artifact@v4
         if:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-x64-packages
+          name: rin-gitpeach-desktop-linux-x64-packages
           path: |
             dist/*.deb
             dist/*.rpm
+            dist/*.snap
           retention-days: 30
           if-no-files-found: ignore
 
@@ -503,7 +513,7 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=v${VERSION}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitHub Desktop for Linux v${VERSION}" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=Git Peach Desktop v${VERSION}" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
           else
             # Development build
@@ -512,7 +522,7 @@ jobs:
             VERSION="dev-build-${BUILD_NUMBER}-${SHORT_SHA}"
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=dev-${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitHub Desktop for Linux (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=Git Peach Desktop (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
             echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
@@ -521,7 +531,7 @@ jobs:
       - name: Calculate checksums
         run: |
           cd dist-artifacts
-          echo "# Checksums for GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}" > checksums.md
+          echo "# Checksums for Git Peach Desktop ${{ steps.vars.outputs.VERSION }}" > checksums.md
           echo "" >> checksums.md
           echo "| File | Architecture | MD5 | SHA256 |" >> checksums.md
           echo "|------|--------------|-----|--------|" >> checksums.md
@@ -529,7 +539,7 @@ jobs:
           # Process all files and detect architecture from filename
           for dir in */; do
             cd "$dir" 2>/dev/null || continue
-            for file in *.{deb,rpm}; do
+            for file in *.{deb,rpm,snap}; do
               if [ -f "$file" ]; then
                 original_filename=$(basename "$file")
                 display_filename="$original_filename"
@@ -561,7 +571,7 @@ jobs:
           draft: false
           prerelease: ${{ steps.vars.outputs.IS_PRERELEASE }}
           body: |
-            GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}
+            Git Peach Desktop ${{ steps.vars.outputs.VERSION }}
 
             This release includes packages for x64 architecture only.
 
@@ -569,20 +579,34 @@ jobs:
 
             ### Debian/Ubuntu (.deb)
             Download the .deb file for x64:
-            - **x64**: GitHubDesktop-*-amd64.deb
+            - **x64**: RinGitPeachDesktop-*-amd64.deb
 
             Install with:
             ```bash
-            sudo apt install ./GitHubDesktop-*.deb
+            sudo apt install ./RinGitPeachDesktop-*.deb
             ```
 
             ### Red Hat/Fedora (.rpm)
             Download the .rpm file for x64:
-            - **x64**: GitHubDesktop-*-x86_64.rpm
+            - **x64**: RinGitPeachDesktop-*-x86_64.rpm
 
             Install with:
             ```bash
-            sudo rpm -i GitHubDesktop-*.rpm
+            sudo rpm -i RinGitPeachDesktop-*.rpm
+            ```
+
+            ### Ubuntu Snap (.snap)
+            Download the .snap file for x64:
+            - **x64**: RinGitPeachDesktop-*-amd64.snap
+
+            Install with:
+            ```bash
+            sudo snap install ./RinGitPeachDesktop-*.snap --dangerous
+            ```
+
+            Or install directly from Ubuntu Store (once published):
+            ```bash
+            sudo snap install rin-gitpeach-desktop
             ```
 
             ## Architecture Detection
@@ -596,8 +620,8 @@ jobs:
         run: |
           cd dist-artifacts
 
-          # Find all package files (deb and rpm only)
-          find . -name "*.deb" -o -name "*.rpm" | while read file; do
+          # Find all package files (deb, rpm, and snap)
+          find . -name "*.deb" -o -name "*.rpm" -o -name "*.snap" | while read file; do
             if [ -f "$file" ]; then
               original_name=$(basename "$file")
               asset_name="$original_name"
@@ -611,6 +635,9 @@ jobs:
                   ;;
                 *.rpm)
                   content_type="application/x-rpm"
+                  ;;
+                *.snap)
+                  content_type="application/vnd.snap"
                   ;;
                 *)
                   content_type="application/octet-stream"
