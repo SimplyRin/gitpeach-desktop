@@ -161,12 +161,14 @@ if (!handlingSquirrelEvent) {
 initializeDesktopNotifications()
 
 function handleAppURL(url: string) {
-  log.info('Processing protocol url')
+  log.info(`Processing protocol url: ${url}`)
   const action = parseAppURL(url)
+  log.info(`Parsed action type: ${action.name}`)
   onDidLoad(window => {
     // This manual focus call _shouldn't_ be necessary, but is for Chrome on
     // macOS. See https://github.com/desktop/desktop/issues/973.
     window.focus()
+    log.info(`Sending URL action to window: ${action.name}`)
     window.sendURLAction(action)
   })
 }

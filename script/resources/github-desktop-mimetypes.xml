@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="x-scheme-handler/x-github-client">
+    <comment>GitHub Desktop URL Handler</comment>
+    <comment xml:lang="en">GitHub Desktop URL Handler</comment>
+    <comment xml:lang="ja">GitHub Desktop URL ハンドラー</comment>
+    <generic-icon name="github-desktop"/>
+    <glob pattern="x-github-client:*"/>
+  </mime-type>
+  
+  <mime-type type="x-scheme-handler/x-gitpeach-desktop-auth">
+    <comment>GitHub Desktop OAuth Handler</comment>
+    <comment xml:lang="en">GitHub Desktop OAuth Handler</comment>
+    <comment xml:lang="ja">GitHub Desktop OAuth ハンドラー</comment>
+    <generic-icon name="github-desktop"/>
+    <glob pattern="x-gitpeach-desktop-auth:*"/>
+  </mime-type>
+  
+  <mime-type type="x-scheme-handler/x-gitpeach-desktop-dev-auth">
+    <comment>GitHub Desktop Development OAuth Handler</comment>
+    <comment xml:lang="en">GitHub Desktop Development OAuth Handler</comment>
+    <comment xml:lang="ja">GitHub Desktop 開発用 OAuth ハンドラー</comment>
+    <generic-icon name="github-desktop"/>
+    <glob pattern="x-gitpeach-desktop-dev-auth:*"/>
+  </mime-type>
+</mime-info>
