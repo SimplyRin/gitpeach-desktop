@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - development-linux
+      - development-linux-snapstore
       - main
       - linux
       - 'linux-release-*'
@@ -13,6 +14,7 @@ on:
   pull_request:
     branches:
       - development-linux
+      - development-linux-snapstore
       - main
       - linux
       - 'linux-release-*'
@@ -177,7 +179,10 @@ jobs:
           sudo apt-get install -y python3 python3-pip build-essential
 
           # Install additional tools for electron-builder packaging
-          sudo apt-get install -y fakeroot dpkg rpm
+          sudo apt-get install -y fakeroot dpkg
+
+          # Install snapcraft for snap packaging
+          sudo snap install snapcraft --classic
 
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
@@ -185,28 +190,26 @@ jobs:
 
       - name: Install dependencies
         run: |
+          # Clean yarn cache to prevent manifest corruption
+          echo "Cleaning yarn cache..."
+          yarn cache clean
+
           # Install root dependencies
           echo "Installing root dependencies..."
           yarn install --frozen-lockfile --no-progress || yarn install --no-progress
 
-          # Force install the correct electron-builder version and lock it
-          echo "Installing specific electron-builder version..."
-          yarn add electron-builder@25.1.8 --dev --exact
-
-          # Add resolutions to package.json to prevent version conflicts
+          # Add resolutions to package.json to prevent version conflicts (but don't install electron-builder yet)
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.resolutions = pkg.resolutions || {};
-            pkg.resolutions['electron-builder'] = '25.1.8';
-            pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
+            pkg.resolutions['webpack'] = '^5.0.0';
+            pkg.resolutions['**/webpack'] = '^5.0.0';
+            pkg.resolutions['parallel-webpack/webpack'] = '^5.0.0';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
-
-          # Reinstall to apply resolutions
-          yarn install --force
 
           # Ensure @types/node is installed for TypeScript compilation
           echo "Installing @types/node for TypeScript support..."
@@ -305,9 +308,9 @@ jobs:
           # Clean any previous builds
           rm -rf out dist 2>/dev/null || true
 
-          # Run production compilation (webpack)
+          # Run production compilation (webpack) with warnings suppressed
           echo "Running webpack compilation..."
-          yarn compile:prod
+          SASS_SILENCE_DEPRECATIONS=* yarn compile:prod
 
           # Run production build (electron-packager)
           echo "Running electron packaging..."
@@ -322,6 +325,7 @@ jobs:
           GITHUB_RELEASES_REPO: desktop
           DESKTOP_OAUTH_CLIENT_ID: ${{ secrets.DESKTOP_OAUTH_CLIENT_ID }}
           DESKTOP_OAUTH_CLIENT_SECRET: ${{ secrets.DESKTOP_OAUTH_CLIENT_SECRET }}
+          SASS_SILENCE_DEPRECATIONS: "*"
 
       - name: Package Linux application
         run: |
@@ -338,7 +342,7 @@ jobs:
           export PATH="$GIT_EXEC_PATH:$PATH"
           echo "Git exec path: $GIT_EXEC_PATH"
 
-          # Ensure system libraries are available for deb/rpm packaging
+          # Ensure system libraries are available for deb/snap packaging
           echo "Checking system library availability:"
           ldconfig -p | grep -E "(libz|zlib|libbz2|liblzma)" || echo "Some compression libraries may not be found"
 
@@ -350,12 +354,23 @@ jobs:
           echo "Current dist content before packaging:"
           ls -la dist/ || echo "No dist directory yet"
 
-          # Verify the packaged electron app exists
+          # Verify the packaged electron app exists (check both possible names)
           echo "Checking packaged app structure:"
-          ls -la "dist/github-desktop-linux-x64/" || echo "Packaged app directory not found"
+          if [ -d "dist/rin-gitpeach-desktop-linux-x64/" ]; then
+            echo "Found rin-gitpeach-desktop-linux-x64 directory"
+            ls -la "dist/rin-gitpeach-desktop-linux-x64/"
+          elif [ -d "dist/github-desktop-linux-x64/" ]; then
+            echo "Found github-desktop-linux-x64 directory (old naming)"
+            ls -la "dist/github-desktop-linux-x64/"
+          else
+            echo "Packaged app directory not found, listing all contents:"
+            ls -la dist/
+          fi
 
           # Fix electron-builder yargs dependency chain issue
           echo "Fixing electron-builder dependency conflicts..."
+
+          # First, ensure we have the correct resolutions in package.json
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
@@ -363,20 +378,59 @@ jobs:
             pkg.resolutions['electron-builder'] = '25.1.8';
             pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
+            pkg.resolutions['**/string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
+            pkg.resolutions['cliui/string-width'] = '^4.2.3';
+            pkg.resolutions['wrap-ansi'] = '^7.0.0';
+            pkg.resolutions['**/wrap-ansi'] = '^7.0.0';
+            pkg.resolutions['webpack'] = '^5.0.0';
+            pkg.resolutions['**/webpack'] = '^5.0.0';
+            pkg.resolutions['parallel-webpack/webpack'] = '^5.0.0';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
-          # Reinstall to apply resolutions and ensure correct version
-          echo "Reinstalling with dependency resolutions..."
-          yarn install --ignore-scripts --force || true
+          # Install dependencies using npm instead of yarn for electron-builder (avoids manifest corruption)
+          echo "Installing electron-builder and dependencies with npm..."
 
-          # Verify electron-builder version
+          # Remove any existing node_modules/.bin entries for electron-builder
+          rm -rf node_modules/.bin/electron-builder* || true
+
+          # Use npm to install electron-builder to avoid yarn cache corruption
+          npm install electron-builder@25.1.8 string-width@^4.2.3 --save-dev --exact --no-audit --no-fund || {
+            echo "npm install failed, trying with --force"
+            npm install electron-builder@25.1.8 string-width@^4.2.3 --save-dev --exact --force --no-audit --no-fund
+          }
+
+          # Verify packages are installed correctly
+          echo "Verifying installation..."
+          npm list electron-builder || echo "electron-builder not found in npm list"
+
+          # Verify string-width is available
+          echo "Checking string-width availability..."
+          node -e "try { require('string-width'); console.log('string-width found'); } catch(e) { console.log('string-width missing:', e.message); }"
+
+          # Verify electron-builder version and dependencies
           echo "Verifying electron-builder version..."
-          yarn list electron-builder || true
-          npx electron-builder --version || true
+          npm list electron-builder || true
 
-          # Package using the TypeScript script (this will build x64 only)
+          # Check electron-builder binary and make sure it's accessible
+          echo "Checking electron-builder binary..."
+          if [ -f "node_modules/.bin/electron-builder" ]; then
+            echo "electron-builder binary found"
+            # Test with a simple version check
+            NODE_PATH=./node_modules node_modules/.bin/electron-builder --version || {
+              echo "Version check failed, trying npx as fallback"
+              # If version check fails, use npx as fallback
+              echo "Using npx electron-builder as fallback..."
+              npx electron-builder --version || {
+                echo "npx also failed, trying global npm install"
+                npm install -g electron-builder@25.1.8 --force
+              }
+            }
+          else
+            echo "electron-builder binary not found, installing globally with npm"
+            npm install -g electron-builder@25.1.8 --force
+          fi          # Package using the TypeScript script (this will build x64 only)
           echo "Running packaging script..."
 
           # Remove cross-compilation environment variables (ARM64 not needed)
@@ -387,25 +441,46 @@ jobs:
           if NODE_ENV=production yarn ts-node --transpile-only -P script/tsconfig.json script/package.ts; then
             echo "TypeScript packaging succeeded"
           else
-            echo "TypeScript execution failed, trying alternative..."
-            # Fallback to direct electron-builder execution - ensure correct version
-            echo "Installing specific electron-builder version..."
-            yarn remove electron-builder || true
-            yarn add electron-builder@25.1.8 --dev --exact || true
+            echo "TypeScript execution failed, trying electron-builder directly..."
+            
+            # Determine which packaged directory exists
+            PACKAGED_DIR=""
+            if [ -d "dist/rin-gitpeach-desktop-linux-x64" ]; then
+              PACKAGED_DIR="dist/rin-gitpeach-desktop-linux-x64"
+            elif [ -d "dist/github-desktop-linux-x64" ]; then
+              PACKAGED_DIR="dist/github-desktop-linux-x64"
+            else
+              echo "ERROR: No packaged directory found"
+              ls -la dist/
+              exit 1
+            fi
+            
+            echo "Using packaged directory: $PACKAGED_DIR"
+            
+            # Determine electron-builder command (prefer local npm install over yarn)
+            if [ -f "node_modules/.bin/electron-builder" ]; then
+              ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules ./node_modules/.bin/electron-builder"
+            elif command -v npx >/dev/null 2>&1; then
+              ELECTRON_BUILDER_CMD="NODE_PATH=./node_modules npx electron-builder"
+            elif command -v electron-builder >/dev/null 2>&1; then
+              ELECTRON_BUILDER_CMD="electron-builder"
+            else
+              echo "ERROR: electron-builder not found anywhere"
+              exit 1
+            fi
+            
+            echo "Using electron-builder command: $ELECTRON_BUILDER_CMD"
             
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
             
-            # Verify version before building
-            echo "Using electron-builder version: $(npx electron-builder --version)"
-            
-            # Try building each target separately for better error isolation
+            # Build packages for Ubuntu Store (.deb and .snap only, no .rpm)
             echo "Building deb packages..."
-            npx electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
+            $ELECTRON_BUILDER_CMD --linux deb --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
             
-            echo "Building rpm packages..."
-            npx electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
+            echo "Building snap packages for Ubuntu Store..."
+            $ELECTRON_BUILDER_CMD --linux snap --x64 --prepackaged "$PACKAGED_DIR" --config script/electron-builder-linux.yml --publish=never || echo "snap build failed"
             
             echo "Packaging completed"
           fi
@@ -418,14 +493,18 @@ jobs:
           echo "All files in dist directory:"
           find dist/ -type f -name "*" 2>/dev/null || echo "Could not list dist files"
 
-          # Check for specific package types
+          # Check for specific package types (only .deb and .snap for Ubuntu Store)
           echo "Looking for specific package types:"
           echo "DEB files: $(find dist/ -name "*.deb" 2>/dev/null | wc -l)"
-          echo "RPM files: $(find dist/ -name "*.rpm" 2>/dev/null | wc -l)"
+          echo "SNAP files: $(find dist/ -name "*.snap" 2>/dev/null | wc -l)"
+
+          # Show actual package files found
+          echo "Package files found:"
+          find dist/ -name "*.deb" -o -name "*.snap" 2>/dev/null || echo "No package files found"
 
           # Verify architecture of generated binaries
           echo "Verifying binary architectures..."
-          for f in dist/*.{deb,rpm}; do
+          for f in dist/*.{deb,snap}; do
             if [ -f "$f" ]; then
               echo "Checking $f:"
               file "$f" || true
@@ -433,7 +512,7 @@ jobs:
           done
 
           # Size sanity check - packages should be > 100MB
-          for f in dist/*.{deb,rpm}; do
+          for f in dist/*.{deb,snap}; do
             if [ -f "$f" ]; then
               size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null || echo "0")
               size_mb=$((size / 1024 / 1024))
@@ -449,16 +528,16 @@ jobs:
           DESKTOP_OAUTH_CLIENT_ID: ${{ secrets.DESKTOP_OAUTH_CLIENT_ID }}
           DESKTOP_OAUTH_CLIENT_SECRET: ${{ secrets.DESKTOP_OAUTH_CLIENT_SECRET }}
 
-      - name: Upload Linux packages (deb and rpm only)
+      - name: Upload Linux packages (deb and snap for Ubuntu Store)
         uses: actions/upload-artifact@v4
         if:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-x64-packages
+          name: rin-gitpeach-desktop-linux-x64-packages
           path: |
             dist/*.deb
-            dist/*.rpm
+            dist/*.snap
           retention-days: 30
           if-no-files-found: ignore
 
@@ -468,7 +547,7 @@ jobs:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-checksums
+          name: rin-gitpeach-desktop-linux-checksums
           path: |
             dist/*.sha256
             dist/checksums.txt
@@ -507,7 +586,7 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=v${VERSION}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitHub Desktop for Linux v${VERSION}" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=Git Peach Desktop v${VERSION}" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
           else
             # Development build
@@ -516,7 +595,7 @@ jobs:
             VERSION="dev-build-${BUILD_NUMBER}-${SHORT_SHA}"
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=dev-${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitHub Desktop for Linux (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=Git Peach Desktop (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
             echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
@@ -525,7 +604,7 @@ jobs:
       - name: Calculate checksums
         run: |
           cd dist-artifacts
-          echo "# Checksums for GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}" > checksums.md
+          echo "# Checksums for Git Peach Desktop ${{ steps.vars.outputs.VERSION }}" > checksums.md
           echo "" >> checksums.md
           echo "| File | Architecture | MD5 | SHA256 |" >> checksums.md
           echo "|------|--------------|-----|--------|" >> checksums.md
@@ -533,7 +612,7 @@ jobs:
           # Process all files and detect architecture from filename
           for dir in */; do
             cd "$dir" 2>/dev/null || continue
-            for file in *.{deb,rpm}; do
+            for file in *.{deb,snap}; do
               if [ -f "$file" ]; then
                 original_filename=$(basename "$file")
                 display_filename="$original_filename"
@@ -565,7 +644,7 @@ jobs:
           draft: false
           prerelease: ${{ steps.vars.outputs.IS_PRERELEASE }}
           body: |
-            GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}
+            Git Peach Desktop ${{ steps.vars.outputs.VERSION }}
 
             This release includes packages for x64 architecture only.
 
@@ -573,20 +652,25 @@ jobs:
 
             ### Debian/Ubuntu (.deb)
             Download the .deb file for x64:
-            - **x64**: GitHubDesktop-*-amd64.deb
+            - **x64**: RinGitPeachDesktop-*-amd64.deb
 
             Install with:
             ```bash
-            sudo apt install ./GitHubDesktop-*.deb
+            sudo apt install ./RinGitPeachDesktop-*.deb
             ```
 
-            ### Red Hat/Fedora (.rpm)
-            Download the .rpm file for x64:
-            - **x64**: GitHubDesktop-*-x86_64.rpm
+            ### Ubuntu Snap (.snap)
+            Download the .snap file for x64:
+            - **x64**: RinGitPeachDesktop-*-amd64.snap
 
             Install with:
             ```bash
-            sudo rpm -i GitHubDesktop-*.rpm
+            sudo snap install ./RinGitPeachDesktop-*.snap --dangerous
+            ```
+
+            Or install directly from Ubuntu Store (once published):
+            ```bash
+            sudo snap install rin-gitpeach-desktop
             ```
 
             ## Architecture Detection
@@ -600,8 +684,8 @@ jobs:
         run: |
           cd dist-artifacts
 
-          # Find all package files (deb and rpm only)
-          find . -name "*.deb" -o -name "*.rpm" | while read file; do
+          # Find all package files (deb and snap)
+          find . -name "*.deb" -o -name "*.snap" | while read file; do
             if [ -f "$file" ]; then
               original_name=$(basename "$file")
               asset_name="$original_name"
@@ -613,8 +697,8 @@ jobs:
                 *.deb)
                   content_type="application/vnd.debian.binary-package"
                   ;;
-                *.rpm)
-                  content_type="application/x-rpm"
+                *.snap)
+                  content_type="application/vnd.snap"
                   ;;
                 *)
                   content_type="application/octet-stream"
