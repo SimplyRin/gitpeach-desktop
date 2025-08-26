@@ -1,4 +1,4 @@
-artifactName: 'RinGitPeachDesktop-${os}-${arch}-${version}.${ext}'
+artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
 directories:
   output: 'dist'
 linux:
@@ -17,35 +17,39 @@ linux:
       arch:
         - x64
         - arm64
-    - target: snap
+    - target: rpm
       arch:
         - x64
+        - arm64
   maintainer: 'SimplyRin <contact@simplyrin.net>'
-  executableName: 'rin-gitpeach-desktop'
+  executableName: 'github-desktop'
   extraFiles:
-    - from: 'script/resources/rin-gitpeach-desktop.desktop'
-      to: 'usr/share/applications/rin-gitpeach-desktop.desktop'
+    - from: 'script/resources/github-desktop.desktop'
+      to: 'usr/share/applications/github-desktop.desktop'
     - from: 'app/static/linux/logos/32x32.png'
-      to: 'usr/share/icons/hicolor/32x32/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/32x32/apps/github-desktop.png'
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/icons/hicolor/64x64/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/64x64/apps/github-desktop.png'
     - from: 'app/static/linux/logos/128x128.png'
-      to: 'usr/share/icons/hicolor/128x128/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/128x128/apps/github-desktop.png'
     - from: 'app/static/linux/logos/256x256.png'
-      to: 'usr/share/icons/hicolor/256x256/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/256x256/apps/github-desktop.png'
     - from: 'app/static/linux/logos/512x512.png'
-      to: 'usr/share/icons/hicolor/512x512/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/512x512/apps/github-desktop.png'
     # Add scalable SVG icon if available, or additional PNG icon for better compatibility
     - from: 'app/static/linux/logos/1024x1024.png'
-      to: 'usr/share/icons/hicolor/1024x1024/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/1024x1024/apps/github-desktop.png'
     # Additional icon for pixmaps directory (for older systems)
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/pixmaps/rin-gitpeach-desktop.png'
+      to: 'usr/share/pixmaps/github-desktop.png'
+    # Include ARM64 icon fix script
+    - from: 'script/fix-arm64-desktop-icons.sh'
+      to: 'usr/lib/github-desktop/fix-arm64-desktop-icons.sh'
     # Ubuntu 24.04 Yaru theme compatibility
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/icons/Yaru/64x64/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/Yaru/64x64/apps/github-desktop.png'
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/icons/Yaru/48x48/apps/rin-gitpeach-desktop.png'
+      to: 'usr/share/icons/Yaru/48x48/apps/github-desktop.png'
 
 deb:
   depends:
@@ -66,64 +70,16 @@ deb:
     - '--deb-recommends=xdg-utils'
     - '--deb-recommends=desktop-file-utils'
 
-snap:
-  category: 'Development'
-  summary: 'Git Peach Desktop - Simple Git collaboration from your desktop'
-  description: |
-    Git Peach Desktop is a powerful Git client that makes version control 
-    accessible and intuitive for everyone. Features include:
-
-    * Visual Git workflow
-    * GitHub integration 
-    * Branch management
-    * Conflict resolution
-    * Commit history visualization
-    * Pull request support
-
-    Perfect for developers who want a beautiful graphical interface for Git operations.
-  grade: 'stable'
-  confinement: 'strict'
-  base: 'core22'
-  stagePackages:
+rpm:
+  depends:
     - git
-    - git-lfs
-    - openssh-client
-    - libnss3
-    - libxss1
-    - libxtst6
-    - libxrandr2
-    - libasound2
-    - libpangocairo-1.0-0
-    - libatk1.0-0
-    - libcairo-gobject2
-    - libgtk-3-0
-    - libgdk-pixbuf2.0-0
-    - libdrm2
-    - libxcomposite1
-    - libxdamage1
-    - libxfixes3
-    - zlib1g
-    - libbz2-1.0
-    - liblzma5
-    - libzstd1
-  plugs:
-    - network
-    - network-bind
-    - home
-    - removable-media
-    - desktop
-    - desktop-legacy
-    - wayland
-    - x11
-    - unity7
-    - audio-playback
-    - pulseaudio
-    - gsettings
-    - opengl
-    - ssh-keys
-    - password-manager-service
-    - system-observe
-    - hardware-observe
-  environment:
-    DISABLE_WAYLAND: 1
-    ELECTRON_TRASH: gio
+    - libsecret
+    - libXScrnSaver
+    - nss
+    - alsa-lib
+    - zlib
+    - bzip2-libs
+    - xz-libs
+  afterInstall: 'script/linux-after-install.sh'
+  afterRemove: 'script/linux-after-remove.sh'
+  packageCategory: 'GNOME;GTK;Development'
