@@ -33,57 +33,6 @@ if command -v update-mime-database >/dev/null 2>&1; then
     update-mime-database /usr/share/mime || true
 fi
 
-# Force protocol handler registration
-echo "Registering GitHub Desktop as protocol handler..."
-if command -v xdg-mime >/dev/null 2>&1; then
-    xdg-mime default github-desktop.desktop x-scheme-handler/x-github-client || true
-    xdg-mime default github-desktop.desktop x-scheme-handler/x-gitpeach-desktop-auth || true
-    xdg-mime default github-desktop.desktop x-scheme-handler/x-gitpeach-desktop-dev-auth || true
-    echo "Protocol handlers registered successfully"
-else
-    echo "Warning: xdg-mime not available - protocol handlers may not work"
-fi
-
-# Verify MIME type installation
-if [ -f "/usr/share/mime/packages/github-desktop.xml" ]; then
-    echo "MIME types installed at /usr/share/mime/packages/github-desktop.xml"
-else
-    echo "Warning: MIME types file not found"
-fi
-
-# Ubuntu 22.04 specific fixes
-if [ -f "/etc/os-release" ]; then
-    . /etc/os-release
-    if [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "22.04" ]; then
-        echo "Applying Ubuntu 22.04 specific fixes..."
-        
-        # Ensure snap and flatpak don't interfere
-        if command -v snap >/dev/null 2>&1; then
-            # Create protocol handler override for snap isolation
-            mkdir -p /var/lib/snapd/desktop/applications/ 2>/dev/null || true
-            if [ -f "/usr/share/applications/github-desktop.desktop" ]; then
-                cp /usr/share/applications/github-desktop.desktop /var/lib/snapd/desktop/applications/ 2>/dev/null || true
-            fi
-        fi
-        
-        # Force system-wide protocol registration
-        mkdir -p /etc/xdg/mimeapps.list.d/ 2>/dev/null || true
-        cat > /etc/xdg/mimeapps.list.d/github-desktop.list << 'EOF' || true
-[Default Applications]
-x-scheme-handler/x-github-client=github-desktop.desktop
-x-scheme-handler/x-gitpeach-desktop-auth=github-desktop.desktop
-x-scheme-handler/x-gitpeach-desktop-dev-auth=github-desktop.desktop
-
-[Added Associations]
-x-scheme-handler/x-github-client=github-desktop.desktop
-x-scheme-handler/x-gitpeach-desktop-auth=github-desktop.desktop
-x-scheme-handler/x-gitpeach-desktop-dev-auth=github-desktop.desktop
-EOF
-        
-        echo "Ubuntu 22.04 specific fixes applied"
-    fi
-fi
-
 # Additional steps for ARM64 icon visibility fix
 ARCH=$(uname -m)
 if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then

@@ -17,24 +17,5 @@
 	</array>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>GitHub Desktop uses Apple Events to implement integration features with external editors.</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>GitPeach Desktop Auth</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>x-gitpeach-desktop-auth</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>GitPeach Desktop Dev Auth</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>x-gitpeach-desktop-dev-auth</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>

@@ -67,7 +67,6 @@ const options: RedhatOptions = {
     '256x256': 'app/static/linux/logos/256x256.png',
     '512x512': 'app/static/linux/logos/512x512.png',
     '1024x1024': 'app/static/linux/logos/1024x1024.png',
-    'script/resources/github-desktop-mimetypes.xml': '/usr/share/mime/packages/github-desktop.xml',
   },
   scripts: {
     post: 'script/resources/rpm/post.sh',
