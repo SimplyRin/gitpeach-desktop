@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GitPeach Desktop
+GenericName=Git GUI Client
+Comment=Simple Git collaboration from your desktop
+Exec=gitpeach-desktop %U
+Icon=gitpeach-desktop-client
+StartupNotify=true
+NoDisplay=false
+Categories=Development;RevisionControl;
+MimeType=x-scheme-handler/x-github-client;x-scheme-handler/x-github-desktop-auth;application/x-git;
+Keywords=git;github;gitpeach;vcs;dvcs;version control;

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - development-linux
+      - development-linux-snapstore
       - main
       - linux
       - 'linux-release-*'
@@ -13,6 +14,7 @@ on:
   pull_request:
     branches:
       - development-linux
+      - development-linux-snapstore
       - main
       - linux
       - 'linux-release-*'

@@ -20,3 +20,5 @@ junit*.xml
 *.swp
 tslint-rules/
 script/release_notes.txt
+snap/parts
+*.deb

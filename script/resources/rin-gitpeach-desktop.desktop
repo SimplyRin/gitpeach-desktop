@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=GitPeach Desktop Client
+Comment=Simple Git collaboration from your desktop
+GenericName=Git Client
+Exec=rin-gitpeach-desktop %U
+Icon=rin-gitpeach-desktop
+Type=Application
+StartupNotify=true
+StartupWMClass=GitPeachDesktop
+Categories=GNOME;GTK;Development;
+MimeType=x-scheme-handler/x-github-client;x-scheme-handler/x-github-desktop-auth;x-scheme-handler/x-github-desktop-dev-auth;
+X-Desktop-File-Install-Version=0.20

@@ -65,12 +65,12 @@ export function buildDefaultMenu({
 
   if (__DARWIN__) {
     template.push({
-      label: 'GitHub Desktop',
+      label: 'GitPeach Desktop',
       submenu: [
         {
-          label: 'About GitHub Desktop',
+          label: 'About GitPeach Desktop',
           click: emit('show-about'),
-          id: 'about',
+          id: 'show-about'
         },
         separator,
         {
@@ -506,7 +506,7 @@ export function buildDefaultMenu({
     label: __DARWIN__ ? 'Report Issue…' : 'Report issue…',
     click() {
       shell
-        .openExternal('https://github.com/shiftkey/desktop/issues/new/choose')
+        .openExternal('https://github.com/SimplyRin/desktop/issues/new/choose')
         .catch(err => log.error('Failed opening issue creation page', err))
     },
   }
@@ -568,7 +568,7 @@ export function buildDefaultMenu({
         ...helpItems,
         separator,
         {
-          label: '&About GitHub Desktop',
+          label: '&About GitPeach Desktop',
           click: emit('show-about'),
           id: 'about',
         },

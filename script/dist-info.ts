@@ -25,7 +25,7 @@ export function getExecutableName() {
   if (process.platform === 'win32') {
     return `${getWindowsIdentifierName()}${suffix}`
   } else if (process.platform === 'linux') {
-    return `github-desktop${suffix}`
+    return `gitpeach-desktop${suffix}`
   } else {
     return productName
   }

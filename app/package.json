@@ -1,8 +1,8 @@
 {
-  "name": "github-desktop",
-  "productName": "GitHub Desktop",
-  "bundleID": "com.github.GitHubClient",
-  "companyName": "GitHub, Inc.",
+  "name": "rin-gitpeach-desktop",
+  "productName": "GitPeach Desktop Client",
+  "bundleID": "net.simplyrin.gitpeachdesktop",
+  "companyName": "SimplyRin",
   "version": "3.5.2",
   "main": "./main.js",
   "repository": {
