@@ -20,3 +20,11 @@ junit*.xml
 *.swp
 tslint-rules/
 script/release_notes.txt
+
+snap/local/
+snap/parts/
+snap/prime/
+snap/stage/
+snap/*.snap
+snap/*.debug
+

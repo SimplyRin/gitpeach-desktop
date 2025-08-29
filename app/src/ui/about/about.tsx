@@ -302,6 +302,9 @@ export class About extends React.Component<IAboutProps> {
             </span>{' '}
             ({releaseNotesLink})
           </p>
+          <p className="no-padding">
+            GitPeach Desktop is a fork of GitHub Desktop and is not an official GitHub app.
+          </p>
           {this.renderUpdateDetails()}
           {this.renderUpdateButton()}
           {this.renderBetaLink()}
@@ -314,11 +317,6 @@ export class About extends React.Component<IAboutProps> {
             <p className="no-padding terms-and-license">
               <LinkButton onClick={this.props.onShowAcknowledgements}>
                 License and Open Source Notices
-              </LinkButton>
-            </p>
-            <p className="terms-and-license">
-              <LinkButton uri="https://gh.io/copilot-for-desktop-transparency">
-                Responsible use of Copilot in GitPeach Desktop
               </LinkButton>
             </p>
             <p className="no-padding terms-and-license build-info">
