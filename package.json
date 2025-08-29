@@ -20,6 +20,8 @@
     "build:dev": "yarn compile:dev && cross-env NODE_ENV=development ts-node -P script/tsconfig.json script/build.ts",
     "build:prod": "yarn compile:prod && cross-env NODE_ENV=production ts-node -P script/tsconfig.json script/build.ts",
     "package": "ts-node -P script/tsconfig.json script/package.ts",
+    "package:snap": "ts-node -P script/tsconfig.json script/package-snap.ts",
+    "build:snap": "./script/build-snap.sh",
     "electron-builder": "electron-builder",
     "generate-octicons": "ts-node -P script/tsconfig.json script/generate-octicons.ts",
     "compile:script": "tsc -P script/tsconfig.json",

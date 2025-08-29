@@ -1,0 +1,94 @@
+name: rin-gitpeach-desktop
+base: core22
+version: '3.5.2'
+summary: GitPeach Desktop Client - 非公式のGitHubクライアント
+description: |
+  GitPeach Desktop Clientは非公式のGitHubクライアントです。
+  このアプリケーションはGitHub社の公式製品ではありません。
+  シンプルで使いやすいインターフェースでGitリポジトリの管理ができます。
+  
+  主な機能:
+  - Gitリポジトリのクローン、プル、プッシュ
+  - ブランチの作成と切り替え
+  - コミット履歴の表示
+  - マージとコンフリクトの解決
+  - プルリクエストの作成と管理
+  
+  注意: これは非公式のアプリケーションであり、GitHub Inc.によって開発されたものではありません。
+
+grade: stable
+confinement: strict
+
+architectures:
+  - build-on: amd64
+
+apps:
+  rin-gitpeach-desktop:
+    command: usr/bin/rin-gitpeach-desktop
+    desktop: usr/share/applications/rin-gitpeach-desktop.desktop
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - network-bind
+      - ssh-keys
+      - ssh-public-keys
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - unity7
+      - browser-support
+      - gsettings
+      - opengl
+      - audio-playback
+      - removable-media
+      - mount-observe
+      - system-observe
+
+parts:
+  rin-gitpeach-desktop:
+    plugin: dump
+    source: .
+    stage-packages:
+      - libnss3
+      - libgconf-2-4
+      - libxtst6
+      - libxrandr2
+      - libasound2
+      - libpangocairo-1.0-0
+      - libatk1.0-0
+      - libcairo-gobject2
+      - libgtk-3-0
+      - libgdk-pixbuf2.0-0
+      - libdrm2
+      - libxcomposite1
+      - libxdamage1
+      - libxfixes3
+      - libxss1
+      - libatspi2.0-0
+      - libuuid1
+      - libsecret-1-0
+    organize:
+      '*': .
+    override-build: |
+      # .debファイルから内容を抽出
+      if [ -f "dist/rin-gitpeach-desktop_*.deb" ]; then
+        echo "Extracting .deb package..."
+        dpkg-deb -x dist/rin-gitpeach-desktop_*.deb $SNAPCRAFT_PART_INSTALL/
+      else
+        echo "Error: .deb file not found in dist/ directory"
+        exit 1
+      fi
+      
+      # 実行権限を設定
+      if [ -f "$SNAPCRAFT_PART_INSTALL/usr/bin/rin-gitpeach-desktop" ]; then
+        chmod +x $SNAPCRAFT_PART_INSTALL/usr/bin/rin-gitpeach-desktop
+      fi
+      
+      # デスクトップファイルが存在する場合の処理
+      if [ -f "$SNAPCRAFT_PART_INSTALL/usr/share/applications/rin-gitpeach-desktop.desktop" ]; then
+        # デスクトップファイル内のアイコンパスを修正
+        sed -i 's|Icon=.*|Icon=${SNAP}/usr/share/pixmaps/rin-gitpeach-desktop.png|g' \
+          $SNAPCRAFT_PART_INSTALL/usr/share/applications/rin-gitpeach-desktop.desktop
+      fi
