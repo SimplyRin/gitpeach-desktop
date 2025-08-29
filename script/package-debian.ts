@@ -54,7 +54,7 @@ const options: DebianOptions = {
   arch: getArchitecture(),
   description: 'Simple collaboration from your desktop',
   productDescription:
-    'This is the unofficial port of GitHub Desktop for Linux distributions',
+    'This is the unofficial port of GitPeach Desktop for Linux distributions',
   section: 'GNOME;GTK;Development',
   priority: 'extra',
   homepage: 'https://github.com/shiftkey/desktop',

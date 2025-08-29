@@ -69,7 +69,7 @@ export const GitUserAgent = memoizeOne(() =>
     })
     .then(v => {
       const suffix = __DEV__ ? `-${__SHA__.substring(0, 10)}` : ''
-      const ghdVersion = `GitHub Desktop/${__APP_VERSION__}${suffix}`
+      const ghdVersion = `GitPeach Desktop/${__APP_VERSION__}${suffix}`
       const { platform, arch } = process
 
       return `git/${v} (${ghdVersion}; ${platform} ${arch})`

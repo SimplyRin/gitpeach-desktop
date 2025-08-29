@@ -156,7 +156,7 @@ export class About extends React.Component<IAboutProps> {
     if (__LINUX__) {
       return (
         <p>
-          Please visit the GitHub Desktop for Linux release page for
+          Please visit the GitPeach Desktop for Linux release page for
           Linux-specific release notes and to download the latest version.
         </p>
       )
@@ -290,7 +290,7 @@ export class About extends React.Component<IAboutProps> {
           <Row className="logo">
             <img
               src={DesktopLogo}
-              alt="GitHub Desktop"
+              alt="GitPeach Desktop"
               width="64"
               height="64"
             />
@@ -318,7 +318,7 @@ export class About extends React.Component<IAboutProps> {
             </p>
             <p className="terms-and-license">
               <LinkButton uri="https://gh.io/copilot-for-desktop-transparency">
-                Responsible use of Copilot in GitHub Desktop
+                Responsible use of Copilot in GitPeach Desktop
               </LinkButton>
             </p>
             <p className="no-padding terms-and-license build-info">

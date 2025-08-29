@@ -508,7 +508,7 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=v${VERSION}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitHub Desktop for Linux v${VERSION}" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=GitPeach Desktop for Linux v${VERSION}" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
           else
             # Development build
@@ -517,7 +517,7 @@ jobs:
             VERSION="dev-build-${BUILD_NUMBER}-${SHORT_SHA}"
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=dev-${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitHub Desktop for Linux (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=GitPeach Desktop for Linux (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
             echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
@@ -526,7 +526,7 @@ jobs:
       - name: Calculate checksums
         run: |
           cd dist-artifacts
-          echo "# Checksums for GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}" > checksums.md
+          echo "# Checksums for GitPeach Desktop for Linux ${{ steps.vars.outputs.VERSION }}" > checksums.md
           echo "" >> checksums.md
           echo "| File | Architecture | MD5 | SHA256 |" >> checksums.md
           echo "|------|--------------|-----|--------|" >> checksums.md
@@ -566,7 +566,7 @@ jobs:
           draft: false
           prerelease: ${{ steps.vars.outputs.IS_PRERELEASE }}
           body: |
-            GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}
+            GitPeach Desktop for Linux ${{ steps.vars.outputs.VERSION }}
 
             This release includes packages for x64 architecture only.
 
