@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - development-linux
+      - development-linux-peach
       - main
       - linux
       - 'linux-release-*'
