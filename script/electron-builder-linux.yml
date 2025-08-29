@@ -20,10 +20,10 @@ linux:
       arch:
         - x64
   maintainer: 'SimplyRin <contact@simplyrin.net>'
-  executableName: 'gitpeach-desktop'
+  executableName: 'rin-gitpeach-desktop'
   extraFiles:
     - from: 'script/resources/github-desktop.desktop'
-      to: 'usr/share/applications/github-desktop.desktop'
+      to: 'usr/share/applications/rin-gitpeach-desktop.desktop'
     - from: 'app/static/linux/logos/32x32.png'
       to: 'usr/share/icons/hicolor/32x32/apps/rin-gitpeach-desktop.png'
     - from: 'app/static/linux/logos/64x64.png'

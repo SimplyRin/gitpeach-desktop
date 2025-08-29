@@ -92,9 +92,13 @@ export async function packageRedhat(): Promise<string> {
   const installer = require('electron-installer-redhat')
 
   await installer(options)
-  const installersPath = `${distRoot}/github-desktop*.rpm`
+  const installersPattern1 = `${distRoot}/rin-gitpeach-desktop*.rpm`
+  const installersPattern2 = `${distRoot}/github-desktop*.rpm`
 
-  const files = await globPromise(installersPath)
+  let files = await globPromise(installersPattern1)
+  if (files.length === 0) {
+    files = await globPromise(installersPattern2)
+  }
 
   if (files.length !== 1) {
     return Promise.reject(

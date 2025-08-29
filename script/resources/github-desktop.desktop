@@ -1,15 +1,15 @@
 [Desktop Entry]
-Name=GitHub Desktop
+Name=GitPeach Desktop Client
 GenericName=Git Client
 Comment=Simple collaboration from your desktop
-Exec=github-desktop %U
-Icon=/usr/share/icons/hicolor/64x64/apps/github-desktop.png
+Exec=rin-gitpeach-desktop %U
+Icon=/usr/share/icons/hicolor/64x64/apps/rin-gitpeach-desktop.png
 Type=Application
 Categories=Development;IDE;RevisionControl;
 Keywords=git;github;version control;development;repository;
 MimeType=x-scheme-handler/x-github-client;x-scheme-handler/x-gitpeach-desktop-auth;x-scheme-handler/x-gitpeach-desktop-dev-auth;
 StartupNotify=true
-StartupWMClass=github-desktop
+StartupWMClass=rin-gitpeach-desktop
 Terminal=false
 X-GNOME-SingleWindow=true
 NoDisplay=false
@@ -17,8 +17,8 @@ Actions=new-repo;clone-repo;
 
 [Desktop Action new-repo]
 Name=Create New Repository
-Exec=github-desktop --new-repo
+Exec=rin-gitpeach-desktop --new-repo
 
 [Desktop Action clone-repo]
 Name=Clone Repository
-Exec=github-desktop --clone-repo
+Exec=rin-gitpeach-desktop --clone-repo

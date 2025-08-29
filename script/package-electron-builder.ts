@@ -93,6 +93,10 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
 
   // Find all generated packages (deb, rpm) for all architectures
   const patterns = [
+    `${distRoot}/rin-gitpeach-desktop*.deb`,
+    `${distRoot}/rin-gitpeach-desktop*.rpm`,
+    `${distRoot}/GitPeachDesktop-*.deb`,
+    `${distRoot}/GitPeachDesktop-*.rpm`,
     `${distRoot}/GitHubDesktop-*.deb`,
     `${distRoot}/GitHubDesktop-*.rpm`,
   ]
