@@ -22,7 +22,7 @@ import { formatDate } from '../../lib/format-date'
 const logoPath = __DARWIN__
   ? 'static/logo-64x64@2x.png'
   : __LINUX__
-  ? 'static/linux/logos/64x64.png'
+  ? 'static/logos/64x64.png'
   : 'static/windows-logo-64x64@2x.png'
 const DesktopLogo = encodePathAsUrl(__dirname, logoPath)
 
