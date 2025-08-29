@@ -51,7 +51,7 @@ export class CrashWindow {
     } else if (__WIN32__) {
       windowOptions.frame = false
     } else if (__LINUX__) {
-      windowOptions.icon = join(__dirname, '..', 'static', 'linux', 'logos', '512x512.png')
+      windowOptions.icon = join(__dirname, 'static', 'logos', '512x512.png')
     }
 
     this.window = new BrowserWindow(windowOptions)
@@ -62,7 +62,7 @@ export class CrashWindow {
   }
 
   public load() {
-    log.debug('Starting crash process')
+    console.log('Starting crash process')
 
     // We only listen for the first of the loading events to avoid a bug in
     // Electron/Chromium where they can sometimes fire more than once. See
@@ -71,11 +71,11 @@ export class CrashWindow {
     // shouldn't really matter as in production builds loading _should_ only
     // happen once.
     this.window.webContents.once('did-start-loading', () => {
-      log.debug('Crash process in startup')
+      console.log('Crash process in startup')
     })
 
     this.window.webContents.once('did-finish-load', () => {
-      log.debug('Crash process started')
+      console.log('Crash process started')
       if (process.env.NODE_ENV === 'development') {
         this.window.webContents.openDevTools()
       }
@@ -89,7 +89,7 @@ export class CrashWindow {
     })
 
     this.window.webContents.on('did-fail-load', () => {
-      log.error('Crash process failed to load')
+      console.error('Crash process failed to load')
       if (__DEV__) {
         this.window.webContents.openDevTools()
         this.window.show()
@@ -99,7 +99,7 @@ export class CrashWindow {
     })
 
     ipcMain.on('crash-ready', () => {
-      log.debug(`Crash process is ready`)
+      console.log(`Crash process is ready`)
 
       this.hasSentReadyEvent = true
 
@@ -108,7 +108,7 @@ export class CrashWindow {
     })
 
     ipcMain.on('crash-quit', () => {
-      log.debug('Got quit signal from crash process')
+      console.log('Got quit signal from crash process')
       this.window.close()
     })
 
@@ -149,7 +149,7 @@ export class CrashWindow {
 
   /** Show the window. */
   public show() {
-    log.debug('Showing crash process window')
+    console.log('Showing crash process window')
     this.window.show()
   }
 
