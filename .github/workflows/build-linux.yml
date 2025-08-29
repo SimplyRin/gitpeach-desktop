@@ -366,6 +366,12 @@ jobs:
             pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
+            pkg.resolutions['**/string-width'] = '^4.2.3';
+            pkg.resolutions['cliui/string-width'] = '^4.2.3';
+            pkg.resolutions['electron-builder/string-width'] = '^4.2.3';
+            pkg.resolutions['electron-builder/**/string-width'] = '^4.2.3';
+            pkg.resolutions['wrap-ansi'] = '^7.0.0';
+            pkg.resolutions['**/wrap-ansi'] = '^7.0.0';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
           "
 
@@ -373,9 +379,14 @@ jobs:
           echo "Reinstalling with dependency resolutions..."
           yarn install --ignore-scripts --force || true
 
+          # Install string-width explicitly if it's missing
+          echo "Installing missing dependencies explicitly..."
+          yarn add string-width@^4.2.3 --ignore-scripts || true
+
           # Verify electron-builder version
           echo "Verifying electron-builder version..."
           yarn list electron-builder || true
+          yarn list string-width || true
           npx electron-builder --version || true
 
           # Package using the TypeScript script (this will build x64 only)
@@ -395,19 +406,20 @@ jobs:
             yarn remove electron-builder || true
             yarn add electron-builder@25.1.8 --dev --exact || true
             
+            # Install missing dependencies
+            yarn add string-width@^4.2.3 wrap-ansi@^7.0.0 --ignore-scripts || true
+            
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
             echo "Config file exists: $(ls -la script/electron-builder-linux.yml || echo 'Config not found')"
             
             # Verify version before building
-            echo "Using electron-builder version: $(npx electron-builder --version)"
+            echo "Using electron-builder version: $(yarn run electron-builder --version 2>/dev/null || echo 'Version check failed')"
             
-            # Try building each target separately for better error isolation
-            echo "Building deb packages..."
-            npx electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
-            
-            echo "Building rpm packages..."
-            npx electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
+            # Use node directly to avoid yarn/npx issues
+            echo "Building packages with Node.js directly..."
+            node node_modules/.bin/electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
+            node node_modules/.bin/electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
             
             echo "Packaging completed"
           fi

@@ -38,8 +38,8 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     { arch: '--x64', target: 'rpm' },
   ]
 
-  // Try multiple approaches to find electron-builder - prioritize local version
-  let electronBuilder = path.resolve(
+  // Try multiple approaches to find electron-builder - prioritize direct node execution
+  const electronBuilderPath = path.resolve(
     __dirname,
     '..',
     'node_modules',
@@ -47,13 +47,19 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
     'electron-builder'
   )
 
-  // Check if the binary exists, if not try yarn execution
-  if (!require('fs').existsSync(electronBuilder)) {
+  // Use node directly to avoid dependency resolution issues
+  let electronBuilder = 'node'
+  let baseArgs = [electronBuilderPath]
+
+  // Check if the binary exists, if not try alternative approaches
+  if (!require('fs').existsSync(electronBuilderPath)) {
     console.log(
       'electron-builder binary not found at expected path, trying alternatives...'
     )
-    // Use yarn to run the specific version we installed
+    
+    // Try yarn as fallback
     electronBuilder = 'yarn'
+    baseArgs = ['run', 'electron-builder']
   }
 
   const configPath = path.resolve(__dirname, 'electron-builder-linux.yml')
@@ -80,6 +86,7 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
             configPath,
           ]
         : [
+            ...baseArgs,
             'build',
             '--prepackaged',
             distPath,
@@ -90,14 +97,19 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
             configPath,
           ]
 
-    const { error } = cp.spawnSync(electronBuilder, args, { stdio: 'inherit' })
+    const { error, status, stderr, stdout } = cp.spawnSync(electronBuilder, args, { 
+      stdio: 'inherit',
+      encoding: 'utf8'
+    })
 
-    if (error != null) {
+    if (error != null || status !== 0) {
       console.error(
         `Failed to build ${target} for ${arch.replace('--', '')}: ${
-          error.message
+          error?.message || `Exit code: ${status}`
         }`
       )
+      if (stderr) console.error('stderr:', stderr)
+      if (stdout) console.log('stdout:', stdout)
       hasError = true
     }
   }
