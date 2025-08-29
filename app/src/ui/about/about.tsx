@@ -21,6 +21,8 @@ import { formatDate } from '../../lib/format-date'
 
 const logoPath = __DARWIN__
   ? 'static/logo-64x64@2x.png'
+  : __LINUX__
+  ? 'static/linux/logos/64x64.png'
   : 'static/windows-logo-64x64@2x.png'
 const DesktopLogo = encodePathAsUrl(__dirname, logoPath)
 
@@ -290,7 +292,7 @@ export class About extends React.Component<IAboutProps> {
           <Row className="logo">
             <img
               src={DesktopLogo}
-              alt="GitHub Desktop"
+              alt={name}
               width="64"
               height="64"
             />
@@ -320,6 +322,9 @@ export class About extends React.Component<IAboutProps> {
               <LinkButton uri="https://gh.io/copilot-for-desktop-transparency">
                 Responsible use of Copilot in GitHub Desktop
               </LinkButton>
+            </p>
+            <p className="no-padding terms-and-license build-info">
+              GitPeach Desktop is an unofficial fork of GitHub Desktop
             </p>
             <p className="no-padding terms-and-license build-info">
               Built by Hiroki Sasai
