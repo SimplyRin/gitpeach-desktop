@@ -51,11 +51,23 @@ export class CrashWindow {
     } else if (__WIN32__) {
       windowOptions.frame = false
     } else if (__LINUX__) {
-      windowOptions.icon = join(__dirname, 'static', 'logos', '512x512.png')
+      const iconPath = join(__dirname, 'static', 'logos', '512x512.png')
+      console.log('CrashWindow icon path:', iconPath)
+      console.log('CrashWindow icon exists:', require('fs').existsSync(iconPath))
+      windowOptions.icon = iconPath
     }
 
     this.window = new BrowserWindow(windowOptions)
     addTrustedIPCSender(this.window.webContents)
+
+    // For Linux, explicitly set the window icon after creation
+    if (__LINUX__) {
+      const iconPath = join(__dirname, 'static', 'logos', '512x512.png')
+      if (require('fs').existsSync(iconPath)) {
+        this.window.setIcon(iconPath)
+        console.log('Linux CrashWindow: Window icon set via setIcon():', iconPath)
+      }
+    }
 
     this.error = error
     this.errorType = errorType

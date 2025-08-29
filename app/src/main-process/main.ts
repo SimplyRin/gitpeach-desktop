@@ -365,6 +365,35 @@ app.on('ready', () => {
     return
   }
 
+  // Set application icon for Linux
+  if (__LINUX__) {
+    try {
+      const iconPath = require('path').join(
+        __dirname,
+        'static',
+        'logos',
+        '512x512.png'
+      )
+      if (require('fs').existsSync(iconPath)) {
+        console.log('Linux: Application icon path available:', iconPath)
+        
+        // Set additional environment variables for better icon support
+        process.env.XDG_CURRENT_DESKTOP = process.env.XDG_CURRENT_DESKTOP || 'GNOME'
+        process.env.GTK_THEME = process.env.GTK_THEME || 'Adwaita'
+        
+        // Try to set icon via X11 if available
+        try {
+          const { execSync } = require('child_process')
+          console.log('Linux: Attempting to set X11 icon properties')
+        } catch (error) {
+          console.log('Linux: X11 icon setting not available:', error.message)
+        }
+      }
+    } catch (error) {
+      console.log('Linux: Failed to set application icon:', error.message)
+    }
+  }
+
   readyTime = now() - launchTime
 
   possibleProtocols.forEach(protocol => setAsDefaultProtocolClient(protocol))

@@ -83,7 +83,20 @@ export class AppWindow {
         windowOptions.frame = false
       }
       
-      windowOptions.icon = join(__dirname, 'static', 'logos', '512x512.png')
+      const iconPath = join(__dirname, 'static', 'logos', '512x512.png')
+      console.log('AppWindow icon path:', iconPath)
+      console.log('AppWindow icon exists:', require('fs').existsSync(iconPath))
+      windowOptions.icon = iconPath
+
+      // Additional Linux-specific settings for better icon support
+      windowOptions.webPreferences = {
+        ...windowOptions.webPreferences,
+        // Enable experimental features for better icon support
+        experimentalFeatures: true,
+      }
+
+      // Set environment variable for better icon handling
+      process.env.XDG_CURRENT_DESKTOP = process.env.XDG_CURRENT_DESKTOP || 'GNOME'
 
       // relax restriction here for users trying to run app at a small
       // resolution and any other side-effects of dropping this restriction are
@@ -94,6 +107,16 @@ export class AppWindow {
 
     this.window = new BrowserWindow(windowOptions)
     addTrustedIPCSender(this.window.webContents)
+
+    // For Linux, explicitly set the window icon after creation
+    // This helps with window managers that don't respect the icon option
+    if (__LINUX__) {
+      const iconPath = join(__dirname, 'static', 'logos', '512x512.png')
+      if (require('fs').existsSync(iconPath)) {
+        this.window.setIcon(iconPath)
+        console.log('Linux: Window icon set via setIcon():', iconPath)
+      }
+    }
 
     installNotificationCallback(this.window)
 
