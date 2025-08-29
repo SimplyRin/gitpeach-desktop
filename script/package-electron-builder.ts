@@ -14,6 +14,23 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
   const distRoot = getDistRoot()
 
   console.log('Building all Linux packages with electron-builder...')
+  console.log(`Using distribution path: ${distPath}`)
+  console.log(`Using distribution root: ${distRoot}`)
+
+  // Verify the distribution path exists
+  if (!require('fs').existsSync(distPath)) {
+    throw new Error(`Distribution path ${distPath} does not exist. Please run the build step first.`)
+  }
+
+  // List contents of distribution path for debugging
+  console.log(`Contents of ${distPath}:`)
+  try {
+    const fs = require('fs')
+    const contents = fs.readdirSync(distPath)
+    contents.forEach((item: string) => console.log(`  - ${item}`))
+  } catch (err) {
+    console.log('Could not list distribution path contents:', err)
+  }
 
   // Define all target combinations
   const targets = [
@@ -93,8 +110,8 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
 
   // Find all generated packages (deb, rpm) for all architectures
   const patterns = [
-    `${distRoot}/rin-gitpeach-desktop*.deb`,
-    `${distRoot}/rin-gitpeach-desktop*.rpm`,
+    `${distRoot}/rin-gitpeach-desktop-*.deb`,
+    `${distRoot}/rin-gitpeach-desktop-*.rpm`,
     `${distRoot}/GitPeachDesktop-*.deb`,
     `${distRoot}/GitPeachDesktop-*.rpm`,
     `${distRoot}/GitHubDesktop-*.deb`,

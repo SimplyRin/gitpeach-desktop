@@ -1,4 +1,4 @@
-artifactName: 'GitPeachDesktop-${os}-${arch}-${version}.${ext}'
+artifactName: 'rin-gitpeach-desktop-${os}-${arch}-${version}.${ext}'
 directories:
   output: 'dist'
 linux:

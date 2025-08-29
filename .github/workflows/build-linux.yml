@@ -354,7 +354,7 @@ jobs:
 
           # Verify the packaged electron app exists
           echo "Checking packaged app structure:"
-          ls -la "dist/github-desktop-linux-x64/" || echo "Packaged app directory not found"
+          ls -la "dist/rin-gitpeach-desktop-linux-x64/" || echo "Packaged app directory not found"
 
           # Fix electron-builder yargs dependency chain issue
           echo "Fixing electron-builder dependency conflicts..."

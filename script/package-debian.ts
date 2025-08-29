@@ -96,12 +96,16 @@ export async function packageDebian(): Promise<string> {
   const installer = require('electron-installer-debian')
 
   await installer(options)
-  const installersPattern1 = `${distRoot}/rin-gitpeach-desktop*.deb`
-  const installersPattern2 = `${distRoot}/github-desktop*.deb`
+  const installersPattern1 = `${distRoot}/rin-gitpeach-desktop-*.deb`
+  const installersPattern2 = `${distRoot}/rin-gitpeach-desktop*.deb`
+  const installersPattern3 = `${distRoot}/github-desktop*.deb`
 
   let files = await globPromise(installersPattern1)
   if (files.length === 0) {
     files = await globPromise(installersPattern2)
+  }
+  if (files.length === 0) {
+    files = await globPromise(installersPattern3)
   }
 
   if (files.length !== 1) {
