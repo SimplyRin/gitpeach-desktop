@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=GitHub Desktop
+Name=GitPeach Desktop
 GenericName=Git Client
 Comment=Simple collaboration from your desktop
 Exec=github-desktop %U

@@ -30,7 +30,7 @@ interface IAppearanceState {
 function getTitleBarStyleDescription(titleBarStyle: TitleBarStyle): string {
   switch (titleBarStyle) {
     case 'custom':
-      return 'Uses the menu system provided by GitHub Desktop, hiding the default chrome provided by your window manager.'
+      return 'Uses the menu system provided by GitPeach Desktop, hiding the default chrome provided by your window manager.'
     case 'native':
       return 'Uses the menu system and chrome provided by your window manager.'
   }
