@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=GitPeach Desktop Client
+Name=GitPeach Desktop
 GenericName=Git Client
 Comment=Simple collaboration from your desktop
 Exec=rin-gitpeach-desktop %U

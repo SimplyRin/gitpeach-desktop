@@ -1,6 +1,6 @@
 {
   "name": "rin-gitpeach-desktop",
-  "productName": "GitPeach Desktop Client",
+  "productName": "GitPeach Desktop",
   "bundleID": "net.simplyrin.gitpeachdesktop",
   "companyName": "SimplyRin",
   "version": "3.5.2",
