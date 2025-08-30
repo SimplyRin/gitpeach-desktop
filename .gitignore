@@ -27,4 +27,6 @@ snap/prime/
 snap/stage/
 snap/*.snap
 snap/*.debug
-
+snap/temp/
+snap/*.deb
+*.snap

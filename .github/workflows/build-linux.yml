@@ -463,22 +463,65 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-      - name: Upload checksums
-        uses: actions/upload-artifact@v4
-        if:
-          ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
-          github.event_name == 'workflow_dispatch' }}
+  build-snap:
+    name: Build Snap Package
+    runs-on: ubuntu-latest
+    needs: build-linux
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          name: github-desktop-linux-checksums
-          path: |
-            dist/*.sha256
-            dist/checksums.txt
+          repository: ${{ inputs.repository || github.repository }}
+          ref: ${{ inputs.ref || github.ref }}
+          submodules: recursive
+
+      - name: Download Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: github-desktop-linux-x64-packages
+          path: ./dist
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Prepare snap build
+        run: |
+          # Find the deb file
+          DEB_FILE=$(find ./dist -name "*.deb" | head -1)
+          if [ -z "$DEB_FILE" ]; then
+            echo "No .deb file found in artifacts"
+            exit 1
+          fi
+          echo "Found deb file: $DEB_FILE"
+
+          # Extract deb to snap/local/usr
+          mkdir -p snap/local/usr
+          dpkg -x "$DEB_FILE" /tmp/deb_extract
+          cp -r /tmp/deb_extract/usr/* snap/local/usr/
+
+          # Clean snap cache
+          cd snap
+          rm -rf parts prime stage overlay
+
+      - name: Build snap package
+        run: |
+          cd snap
+          snapcraft pack --destructive-mode
+
+      - name: Upload Snap package
+        uses: actions/upload-artifact@v4
+        if: ${{ inputs.upload-artifacts != false || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+        with:
+          name: github-desktop-linux-snap
+          path: snap/*.snap
           retention-days: 30
           if-no-files-found: ignore
 
   release:
     name: Create Release
-    needs: [lint, build-linux]
+    needs: [lint, build-linux, build-snap]
     runs-on: ubuntu-latest
     if:
       ${{ github.event_name == 'push' || github.event_name ==
@@ -572,6 +615,15 @@ jobs:
 
             ## Installation
 
+            ### Snap Package (.snap)
+            Download the .snap file for x64:
+            - **x64**: gitpeach-desktop_*.snap
+
+            Install with:
+            ```bash
+            sudo snap install ./gitpeach-desktop_*.snap --dangerous
+            ```
+
             ### Debian/Ubuntu (.deb)
             Download the .deb file for x64:
             - **x64**: GitHubDesktop-*-amd64.deb
@@ -601,8 +653,8 @@ jobs:
         run: |
           cd dist-artifacts
 
-          # Find all package files (deb and rpm only)
-          find . -name "*.deb" -o -name "*.rpm" | while read file; do
+          # Find all package files (deb, rpm, and snap)
+          find . -name "*.deb" -o -name "*.rpm" -o -name "*.snap" | while read file; do
             if [ -f "$file" ]; then
               original_name=$(basename "$file")
               asset_name="$original_name"
@@ -616,6 +668,9 @@ jobs:
                   ;;
                 *.rpm)
                   content_type="application/x-rpm"
+                  ;;
+                *.snap)
+                  content_type="application/x-snap"
                   ;;
                 *)
                   content_type="application/octet-stream"
