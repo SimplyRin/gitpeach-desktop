@@ -93,8 +93,8 @@ export async function packageElectronBuilder(): Promise<Array<string>> {
 
   // Find all generated packages (deb, rpm) for all architectures
   const patterns = [
-    `${distRoot}/GitHubDesktop-*.deb`,
-    `${distRoot}/GitHubDesktop-*.rpm`,
+    `${distRoot}/GitPeachDesktop-*.deb`,
+    `${distRoot}/GitPeachDesktop-*.rpm`,
   ]
 
   let allFiles: string[] = []
