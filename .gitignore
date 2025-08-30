@@ -30,3 +30,4 @@ snap/*.debug
 snap/temp/
 snap/*.deb
 *.snap
+*.deb
