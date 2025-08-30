@@ -65,10 +65,10 @@ export function buildDefaultMenu({
 
   if (__DARWIN__) {
     template.push({
-      label: 'GitPeach Desktop',
+      label: 'GitHub Desktop',
       submenu: [
         {
-          label: 'About GitPeach Desktop',
+          label: 'About GitHub Desktop',
           click: emit('show-about'),
           id: 'about',
         },
@@ -568,7 +568,7 @@ export function buildDefaultMenu({
         ...helpItems,
         separator,
         {
-          label: '&About GitPeach Desktop',
+          label: '&About GitHub Desktop',
           click: emit('show-about'),
           id: 'about',
         },

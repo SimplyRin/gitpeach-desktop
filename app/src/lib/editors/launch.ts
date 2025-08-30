@@ -45,7 +45,7 @@ async function launchEditor(
     )
     throw new ExternalEditorError(
       e && typeof e === 'object' && 'code' in e && e.code === 'EACCES'
-        ? `GitPeach Desktop doesn't have the proper permissions to start ${editorName}. Please open ${label} and try another editor.`
+        ? `GitHub Desktop doesn't have the proper permissions to start ${editorName}. Please open ${label} and try another editor.`
         : `Something went wrong while trying to start ${editorName}. Please open ${label} and try another editor.`,
       { openPreferences: true }
     )
@@ -93,7 +93,7 @@ export async function launchExternalEditor(
     log.error(`Error while launching ${editor.editor}`, error)
     if (error?.code === 'EACCES') {
       throw new ExternalEditorError(
-        `GitPeach Desktop doesn't have the proper permissions to start '${editor.editor}'. Please open ${label} and try another editor.`,
+        `GitHub Desktop doesn't have the proper permissions to start '${editor.editor}'. Please open ${label} and try another editor.`,
         { openPreferences: true }
       )
     } else {

@@ -51,7 +51,7 @@ const options: RedhatOptions = {
   arch: getArchitecture(),
   description: 'Simple collaboration from your desktop',
   productDescription:
-    'This is the unofficial port of GitPeach Desktop for Linux distributions',
+    'This is the unofficial port of GitHub Desktop for Linux distributions',
   categories: ['GNOME', 'GTK', 'Development'],
   requires: [
     // dugite-native dependencies

@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - development-linux
-      - development-linux-peach
       - main
       - linux
       - 'linux-release-*'
@@ -463,65 +462,22 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
-  build-snap:
-    name: Build Snap Package
-    runs-on: ubuntu-latest
-    needs: build-linux
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ inputs.repository || github.repository }}
-          ref: ${{ inputs.ref || github.ref }}
-          submodules: recursive
-
-      - name: Download Linux packages
-        uses: actions/download-artifact@v4
-        with:
-          name: github-desktop-linux-x64-packages
-          path: ./dist
-
-      - name: Install snapcraft
-        run: sudo snap install snapcraft --classic
-
-      - name: Prepare snap build
-        run: |
-          # Find the deb file
-          DEB_FILE=$(find ./dist -name "*.deb" | head -1)
-          if [ -z "$DEB_FILE" ]; then
-            echo "No .deb file found in artifacts"
-            exit 1
-          fi
-          echo "Found deb file: $DEB_FILE"
-
-          # Extract deb to snap/local/usr
-          mkdir -p snap/local/usr
-          dpkg -x "$DEB_FILE" /tmp/deb_extract
-          cp -r /tmp/deb_extract/usr/* snap/local/usr/
-
-          # Clean snap cache
-          cd snap
-          rm -rf parts prime stage overlay
-
-      - name: Build snap package
-        run: |
-          cd snap
-          snapcraft pack --destructive-mode
-
-      - name: Upload Snap package
+      - name: Upload checksums
         uses: actions/upload-artifact@v4
-        if: ${{ inputs.upload-artifacts != false || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+        if:
+          ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
+          github.event_name == 'workflow_dispatch' }}
         with:
-          name: github-desktop-linux-snap
-          path: snap/*.snap
+          name: github-desktop-linux-checksums
+          path: |
+            dist/*.sha256
+            dist/checksums.txt
           retention-days: 30
           if-no-files-found: ignore
 
   release:
     name: Create Release
-    needs: [lint, build-linux, build-snap]
+    needs: [lint, build-linux]
     runs-on: ubuntu-latest
     if:
       ${{ github.event_name == 'push' || github.event_name ==
@@ -551,7 +507,7 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=v${VERSION}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitPeach Desktop for Linux v${VERSION}" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=GitHub Desktop for Linux v${VERSION}" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
           else
             # Development build
@@ -560,7 +516,7 @@ jobs:
             VERSION="dev-build-${BUILD_NUMBER}-${SHORT_SHA}"
             echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
             echo "RELEASE_TAG=dev-${BUILD_NUMBER}" >> $GITHUB_OUTPUT
-            echo "RELEASE_NAME=GitPeach Desktop for Linux (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
+            echo "RELEASE_NAME=GitHub Desktop for Linux (Development Build #${BUILD_NUMBER})" >> $GITHUB_OUTPUT
             echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
             echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
@@ -569,7 +525,7 @@ jobs:
       - name: Calculate checksums
         run: |
           cd dist-artifacts
-          echo "# Checksums for GitPeach Desktop for Linux ${{ steps.vars.outputs.VERSION }}" > checksums.md
+          echo "# Checksums for GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}" > checksums.md
           echo "" >> checksums.md
           echo "| File | Architecture | MD5 | SHA256 |" >> checksums.md
           echo "|------|--------------|-----|--------|" >> checksums.md
@@ -609,20 +565,11 @@ jobs:
           draft: false
           prerelease: ${{ steps.vars.outputs.IS_PRERELEASE }}
           body: |
-            GitPeach Desktop for Linux ${{ steps.vars.outputs.VERSION }}
+            GitHub Desktop for Linux ${{ steps.vars.outputs.VERSION }}
 
             This release includes packages for x64 architecture only.
 
             ## Installation
-
-            ### Snap Package (.snap)
-            Download the .snap file for x64:
-            - **x64**: gitpeach-desktop_*.snap
-
-            Install with:
-            ```bash
-            sudo snap install ./gitpeach-desktop_*.snap --dangerous
-            ```
 
             ### Debian/Ubuntu (.deb)
             Download the .deb file for x64:
@@ -653,8 +600,8 @@ jobs:
         run: |
           cd dist-artifacts
 
-          # Find all package files (deb, rpm, and snap)
-          find . -name "*.deb" -o -name "*.rpm" -o -name "*.snap" | while read file; do
+          # Find all package files (deb and rpm only)
+          find . -name "*.deb" -o -name "*.rpm" | while read file; do
             if [ -f "$file" ]; then
               original_name=$(basename "$file")
               asset_name="$original_name"
@@ -668,9 +615,6 @@ jobs:
                   ;;
                 *.rpm)
                   content_type="application/x-rpm"
-                  ;;
-                *.snap)
-                  content_type="application/x-snap"
                   ;;
                 *)
                   content_type="application/octet-stream"

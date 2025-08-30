@@ -7,7 +7,7 @@ export function getKeyForAccount(account: Account): string {
 
 /** Get the auth key for the endpoint. */
 export function getKeyForEndpoint(endpoint: string): string {
-  const appName = __DEV__ ? 'GitPeach Desktop Dev' : 'GitPeach'
+  const appName = __DEV__ ? 'GitHub Desktop Dev' : 'GitHub'
 
   return `${appName} - ${endpoint}`
 }

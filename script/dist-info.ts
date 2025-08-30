@@ -25,7 +25,7 @@ export function getExecutableName() {
   if (process.platform === 'win32') {
     return `${getWindowsIdentifierName()}${suffix}`
   } else if (process.platform === 'linux') {
-    return `gitpeach-desktop${suffix}`
+    return `github-desktop${suffix}`
   } else {
     return productName
   }
@@ -94,7 +94,7 @@ export function getWindowsDeltaNugetPackagePath() {
 }
 
 export function getWindowsIdentifierName() {
-  return 'GitPeachDesktop'
+  return 'GitHubDesktop'
 }
 
 export function getBundleSizes() {

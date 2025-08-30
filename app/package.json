@@ -1,19 +1,19 @@
 {
-  "name": "gitpeach-desktop",
-  "productName": "GitPeach Desktop",
-  "bundleID": "net.simplyrin.GitPeachClient",
-  "companyName": "SimplyRin",
+  "name": "github-desktop",
+  "productName": "GitHub Desktop",
+  "bundleID": "com.github.GitHubClient",
+  "companyName": "GitHub, Inc.",
   "version": "3.5.2",
   "main": "./main.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SimplyRin/desktop.git"
+    "url": "https://github.com/desktop/desktop.git"
   },
   "description": "Simple collaboration from your desktop",
   "author": {
-    "name": "SimplyRin",
-    "email": "contact@simplyrin.net",
-    "url": "https://github.com/SimplyRin/desktop"
+    "name": "GitHub, Inc.",
+    "email": "opensource+desktop@github.com",
+    "url": "https://desktop.github.com/"
   },
   "license": "MIT",
   "dependencies": {

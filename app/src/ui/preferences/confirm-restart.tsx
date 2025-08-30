@@ -28,7 +28,7 @@ export class ConfirmRestart extends React.Component<IConfirmRestartProps> {
         type="warning"
       >
         <DialogContent>
-          <p>Restart GitPeach Desktop to apply the title bar settings change?</p>
+          <p>Restart GitHub Desktop to apply the title bar settings change?</p>
         </DialogContent>
         {this.renderFooter()}
       </Dialog>

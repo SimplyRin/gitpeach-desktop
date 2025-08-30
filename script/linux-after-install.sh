@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# GitPeach Desktop Linux Post-Install Script
+# GitHub Desktop Linux Post-Install Script
 
 set -e
 
-echo "GitPeach Desktop Linux installation completed"
+echo "GitHub Desktop Linux installation completed"
 
 # Verify Git is available
 if command -v git >/dev/null 2>&1; then
     echo "Git is available: $(git --version)"
 else
-    echo "Warning: Git is not installed. GitPeach Desktop requires Git to function properly."
+    echo "Warning: Git is not installed. GitHub Desktop requires Git to function properly."
     echo "Please install Git using your package manager:"
     echo "  Ubuntu/Debian: sudo apt install git"
     echo "  Red Hat/Fedora: sudo dnf install git"

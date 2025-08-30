@@ -6,7 +6,7 @@ body:
     attributes:
       label: The problem
       description:
-        Describe the issue you are experiencing with GitPeach Desktop. Provide a
+        Describe the issue you are experiencing with GitHub Desktop. Provide a
         clear and concise description of what you were trying to do and what
         happened, along with any error messages you encountered.
     validations:
@@ -16,7 +16,7 @@ body:
     attributes:
       label: Release version
       description:
-        Open the 'About GitPeach Desktop' menu item to see the GitPeach Desktop
+        Open the 'About GitHub Desktop' menu item to see the GitHub Desktop
         version.
     validations:
       required: true

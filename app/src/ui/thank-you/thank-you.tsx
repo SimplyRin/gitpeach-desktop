@@ -96,7 +96,7 @@ export class ThankYou extends React.Component<IThankYouProps, IThankYouState> {
       this.props.latestVersion !== null ? ` ${this.props.latestVersion}` : ''
     const thankYouNote = (
       <>
-        Thanks so much for all your hard work on GitPeach Desktop{version}. We're
+        Thanks so much for all your hard work on GitHub Desktop{version}. We're
         so grateful for your willingness to contribute and make the app better
         for everyone!
       </>

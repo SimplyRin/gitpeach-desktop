@@ -1,4 +1,4 @@
-artifactName: 'GitPeachDesktop-${os}-${arch}-${version}.${ext}'
+artifactName: 'GitHubDesktop-${os}-${arch}-${version}.${ext}'
 directories:
   output: 'dist'
 linux:
@@ -22,34 +22,34 @@ linux:
         - x64
         - arm64
   maintainer: 'SimplyRin <contact@simplyrin.net>'
-  executableName: 'gitpeach-desktop'
+  executableName: 'github-desktop'
   extraFiles:
-    - from: 'script/resources/gitpeach-desktop.desktop'
-      to: 'usr/share/applications/gitpeach-desktop.desktop'
+    - from: 'script/resources/github-desktop.desktop'
+      to: 'usr/share/applications/github-desktop.desktop'
     - from: 'app/static/linux/logos/32x32.png'
-      to: 'usr/share/icons/hicolor/32x32/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/32x32/apps/github-desktop.png'
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/icons/hicolor/64x64/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/64x64/apps/github-desktop.png'
     - from: 'app/static/linux/logos/128x128.png'
-      to: 'usr/share/icons/hicolor/128x128/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/128x128/apps/github-desktop.png'
     - from: 'app/static/linux/logos/256x256.png'
-      to: 'usr/share/icons/hicolor/256x256/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/256x256/apps/github-desktop.png'
     - from: 'app/static/linux/logos/512x512.png'
-      to: 'usr/share/icons/hicolor/512x512/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/512x512/apps/github-desktop.png'
     # Add scalable SVG icon if available, or additional PNG icon for better compatibility
     - from: 'app/static/linux/logos/1024x1024.png'
-      to: 'usr/share/icons/hicolor/1024x1024/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/hicolor/1024x1024/apps/github-desktop.png'
     # Additional icon for pixmaps directory (for older systems)
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/pixmaps/gitpeach-desktop.png'
+      to: 'usr/share/pixmaps/github-desktop.png'
     # Include ARM64 icon fix script
     - from: 'script/fix-arm64-desktop-icons.sh'
-      to: 'usr/lib/gitpeach-desktop/fix-arm64-desktop-icons.sh'
+      to: 'usr/lib/github-desktop/fix-arm64-desktop-icons.sh'
     # Ubuntu 24.04 Yaru theme compatibility
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/icons/Yaru/64x64/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/Yaru/64x64/apps/github-desktop.png'
     - from: 'app/static/linux/logos/64x64.png'
-      to: 'usr/share/icons/Yaru/48x48/apps/gitpeach-desktop.png'
+      to: 'usr/share/icons/Yaru/48x48/apps/github-desktop.png'
 
 deb:
   depends:
