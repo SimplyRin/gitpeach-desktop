@@ -2,8 +2,8 @@
   "name": "gitpeach-desktop",
   "productName": "GitPeach Desktop",
   "bundleID": "net.simplyrin.GitPeachClient",
-  "companyName": "GitHub, Inc.",
-  "version": "3.5.2",
+  "companyName": "SimplyRin",
+  "version": "3.5.2-snap_1.0.0",
   "main": "./main.js",
   "repository": {
     "type": "git",
