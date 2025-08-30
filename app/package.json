@@ -3,11 +3,11 @@
   "productName": "GitPeach Desktop",
   "bundleID": "net.simplyrin.GitPeachClient",
   "companyName": "SimplyRin",
-  "version": "3.5.2-snap_1.0.0",
+  "version": "3.5.2",
   "main": "./main.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/desktop/desktop.git"
+    "url": "https://github.com/SimplyRin/desktop.git"
   },
   "description": "Simple collaboration from your desktop",
   "author": {
