@@ -372,12 +372,10 @@ jobs:
           echo "Reinstalling with dependency resolutions..."
           yarn install --ignore-scripts --force || true
 
-          # Verify electron-builder version
-          echo "Verifying electron-builder version..."
-          yarn list electron-builder || true
-          npx electron-builder --version || true
-
-          # Package using the TypeScript script (this will build x64 only)
+            # Verify electron-builder version
+            echo "Verifying electron-builder version..."
+            yarn list electron-builder || true
+            yarn exec electron-builder --version || true          # Package using the TypeScript script (this will build x64 only)
           echo "Running packaging script..."
 
           # Remove cross-compilation environment variables (ARM64 not needed)
@@ -403,10 +401,10 @@ jobs:
             
             # Try building each target separately for better error isolation
             echo "Building deb packages..."
-            npx electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
+            yarn exec electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
             
             echo "Building rpm packages..."
-            npx electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
+            yarn exec electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
             
             echo "Packaging completed"
           fi
