@@ -4,13 +4,15 @@ summary: Simple collaboration from your desktop
 description: |
   GitPeach Desktop application for simple collaboration
 
-base: core22
+base: core24
 confinement: strict
 
 parts:
   gitpeach-desktop:
-    plugin: dump
-    source: local/usr
+    plugin: nil
+    source: snap/
+    override-build: |
+      dpkg -x $SNAPCRAFT_PART_SRC/gitpeach-desktop_3.5.2_amd64.deb $SNAPCRAFT_PART_INSTALL
     stage-packages:
       - libasound2t64
       - libatk-bridge2.0-0t64
@@ -96,8 +98,8 @@ parts:
 
 apps:
   gitpeach-desktop:
-    command: bin/gitpeach-desktop
-    desktop: share/applications/gitpeach-desktop.desktop
+    command: usr/bin/gitpeach-desktop
+    desktop: usr/share/applications/gitpeach-desktop.desktop
     plugs:
       - desktop
       - desktop-legacy
@@ -107,3 +109,4 @@ apps:
       - network
       - browser-support
       - opengl
+
