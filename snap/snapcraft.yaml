@@ -5,7 +5,7 @@ description: |
   GitPeach Desktop application for simple collaboration
 
 base: core24
-confinement: strict
+confinement: classic
 
 parts:
   gitpeach-desktop:
