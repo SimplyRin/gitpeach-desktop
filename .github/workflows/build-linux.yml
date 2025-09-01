@@ -191,15 +191,15 @@ jobs:
 
           # Force install the correct electron-builder version and lock it
           echo "Installing specific electron-builder version..."
-          yarn add electron-builder@25.1.8 --dev --exact
+          yarn add electron-builder@26.0.12 --dev --exact
 
           # Add resolutions to package.json to prevent version conflicts
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.resolutions = pkg.resolutions || {};
-            pkg.resolutions['electron-builder'] = '25.1.8';
-            pkg.resolutions['**/electron-builder'] = '25.1.8';
+            pkg.resolutions['electron-builder'] = '26.0.12';
+            pkg.resolutions['**/electron-builder'] = '26.0.12';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
@@ -360,8 +360,8 @@ jobs:
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.resolutions = pkg.resolutions || {};
-            pkg.resolutions['electron-builder'] = '25.1.8';
-            pkg.resolutions['**/electron-builder'] = '25.1.8';
+            pkg.resolutions['electron-builder'] = '26.0.12';
+            pkg.resolutions['**/electron-builder'] = '26.0.12';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
@@ -391,7 +391,7 @@ jobs:
             # Fallback to direct electron-builder execution - ensure correct version
             echo "Installing specific electron-builder version..."
             yarn remove electron-builder || true
-            yarn add electron-builder@25.1.8 --dev --exact || true
+            yarn add electron-builder@26.0.12 --dev --exact || true
             
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
