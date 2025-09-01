@@ -57,7 +57,7 @@
     "@types/minimatch": "^3.0.5",
     "@types/react-addons-transition-group/@types/react": "^16.14.62",
     "@types/react": "^16.14.62",
-    "electron-builder": "26.0.12",
+    "electron-builder": "25.1.8",
     "string-width": "^4.2.3",
     "yargs/string-width": "^4.2.3"
   },
@@ -166,7 +166,7 @@
     "@types/xml2js": "^0.4.11",
     "diff": "^7.0.0",
     "electron": "36.1.0",
-    "electron-builder": "26.0.12",
+    "electron-builder": "25.1.8",
     "electron-packager": "^17.1.2",
     "electron-winstaller": "^5.0.0",
     "eslint-plugin-github": "^5.1.5",

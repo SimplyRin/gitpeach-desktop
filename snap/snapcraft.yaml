@@ -9,7 +9,7 @@ confinement: classic
 
 parts:
   gitpeach-desktop:
-    plugin: dump
+    plugin: nil
     source: snap/
     override-build: |
       dpkg -x $SNAPCRAFT_PART_SRC/gitpeach-desktop_3.5.2_amd64.deb $SNAPCRAFT_PART_INSTALL

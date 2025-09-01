@@ -192,15 +192,15 @@ jobs:
 
           # Force install the correct electron-builder version and lock it
           echo "Installing specific electron-builder version..."
-          yarn add electron-builder@26.0.12 --dev --exact
+          yarn add electron-builder@25.1.8 --dev --exact
 
           # Add resolutions to package.json to prevent version conflicts
           node -e "
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.resolutions = pkg.resolutions || {};
-            pkg.resolutions['electron-builder'] = '26.0.12';
-            pkg.resolutions['**/electron-builder'] = '26.0.12';
+            pkg.resolutions['electron-builder'] = '25.1.8';
+            pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
@@ -361,8 +361,8 @@ jobs:
             const fs = require('fs');
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             pkg.resolutions = pkg.resolutions || {};
-            pkg.resolutions['electron-builder'] = '26.0.12';
-            pkg.resolutions['**/electron-builder'] = '26.0.12';
+            pkg.resolutions['electron-builder'] = '25.1.8';
+            pkg.resolutions['**/electron-builder'] = '25.1.8';
             pkg.resolutions['string-width'] = '^4.2.3';
             pkg.resolutions['yargs/string-width'] = '^4.2.3';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
@@ -372,10 +372,12 @@ jobs:
           echo "Reinstalling with dependency resolutions..."
           yarn install --ignore-scripts --force || true
 
-            # Verify electron-builder version
-            echo "Verifying electron-builder version..."
-            yarn list electron-builder || true
-            yarn exec electron-builder --version || true          # Package using the TypeScript script (this will build x64 only)
+          # Verify electron-builder version
+          echo "Verifying electron-builder version..."
+          yarn list electron-builder || true
+          npx electron-builder --version || true
+
+          # Package using the TypeScript script (this will build x64 only)
           echo "Running packaging script..."
 
           # Remove cross-compilation environment variables (ARM64 not needed)
@@ -390,7 +392,7 @@ jobs:
             # Fallback to direct electron-builder execution - ensure correct version
             echo "Installing specific electron-builder version..."
             yarn remove electron-builder || true
-            yarn add electron-builder@26.0.12 --dev --exact || true
+            yarn add electron-builder@25.1.8 --dev --exact || true
             
             echo "Building packages with electron-builder..."
             echo "Current working directory: $(pwd)"
@@ -401,10 +403,10 @@ jobs:
             
             # Try building each target separately for better error isolation
             echo "Building deb packages..."
-            yarn exec electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
+            npx electron-builder --linux deb --x64 --config script/electron-builder-linux.yml --publish=never || echo "deb build failed"
             
             echo "Building rpm packages..."
-            yarn exec electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
+            npx electron-builder --linux rpm --x64 --config script/electron-builder-linux.yml --publish=never || echo "rpm build failed"
             
             echo "Packaging completed"
           fi
