@@ -109,4 +109,4 @@ apps:
       - network
       - browser-support
       - opengl
-
+      - removable-media
