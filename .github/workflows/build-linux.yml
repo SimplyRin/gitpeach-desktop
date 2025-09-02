@@ -180,9 +180,6 @@ jobs:
           # Install additional tools for electron-builder packaging
           sudo apt-get install -y fakeroot dpkg rpm
 
-          # Install snapcraft for Snap package creation
-          sudo snap install snapcraft --classic
-
           # Install node-gyp globally for native module compilation
           npm install -g node-gyp
         continue-on-error: true
@@ -453,31 +450,7 @@ jobs:
           DESKTOP_OAUTH_CLIENT_ID: ${{ secrets.DESKTOP_OAUTH_CLIENT_ID }}
           DESKTOP_OAUTH_CLIENT_SECRET: ${{ secrets.DESKTOP_OAUTH_CLIENT_SECRET }}
 
-      - name: Build Snap package
-        run: |
-          echo "Building Snap package..."
-
-          # Copy the generated .deb file to snap directory
-          mkdir -p snap
-          cp dist/*.deb snap/ || echo "No .deb file found in dist/"
-
-          # Verify the .deb file exists in snap directory
-          ls -la snap/*.deb || echo "No .deb file in snap directory"
-
-          # Build the Snap package using snapcraft
-          cd snap
-          snapcraft pack
-
-          # Verify the .snap file was created
-          ls -la *.snap || echo "No .snap file created"
-
-          # Move .snap back to dist for uploading
-          mv *.snap ../dist/ || echo "Failed to move .snap to dist"
-        env:
-          NODE_ENV: production
-          SKIP_POSTINSTALL: 1
-
-      - name: Upload Linux packages (deb, rpm, and snap)
+      - name: Upload Linux packages (deb and rpm only)
         uses: actions/upload-artifact@v4
         if:
           ${{ inputs.upload-artifacts != false || github.event_name == 'push' ||
@@ -487,7 +460,6 @@ jobs:
           path: |
             dist/*.deb
             dist/*.rpm
-            dist/*.snap
           retention-days: 30
           if-no-files-found: ignore
 
@@ -562,7 +534,7 @@ jobs:
           # Process all files and detect architecture from filename
           for dir in */; do
             cd "$dir" 2>/dev/null || continue
-            for file in *.{deb,rpm,snap}; do
+            for file in *.{deb,rpm}; do
               if [ -f "$file" ]; then
                 original_filename=$(basename "$file")
                 display_filename="$original_filename"
@@ -618,15 +590,6 @@ jobs:
             sudo rpm -i GitHubDesktop-*.rpm
             ```
 
-            ### Snap (Ubuntu and other Linux distributions)
-            Download the .snap file for x64:
-            - **x64**: gitpeach-desktop_*.snap
-
-            Install with:
-            ```bash
-            sudo snap install --dangerous ./gitpeach-desktop_*.snap
-            ```
-
             ## Architecture Detection
             To determine your system architecture, run:
             ```bash
@@ -638,8 +601,8 @@ jobs:
         run: |
           cd dist-artifacts
 
-          # Find all package files (deb, rpm, and snap)
-          find . -name "*.deb" -o -name "*.rpm" -o -name "*.snap" | while read file; do
+          # Find all package files (deb and rpm only)
+          find . -name "*.deb" -o -name "*.rpm" | while read file; do
             if [ -f "$file" ]; then
               original_name=$(basename "$file")
               asset_name="$original_name"
@@ -653,9 +616,6 @@ jobs:
                   ;;
                 *.rpm)
                   content_type="application/x-rpm"
-                  ;;
-                *.snap)
-                  content_type="application/vnd.snap"
                   ;;
                 *)
                   content_type="application/octet-stream"
