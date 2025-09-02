@@ -464,9 +464,9 @@ jobs:
           # Verify the .deb file exists in snap directory
           ls -la snap/*.deb || echo "No .deb file in snap directory"
 
-          # Build the Snap package using snapcraft
+          # Build the Snap package using snapcraft in destructive mode to avoid LXD
           cd snap
-          snapcraft pack
+          snapcraft pack --destructive-mode
 
           # Verify the .snap file was created
           ls -la *.snap || echo "No .snap file created"
