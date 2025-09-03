@@ -145,7 +145,7 @@ export async function withTrampolineEnv<T>(
         GIT_USER_AGENT: await GitUserAgent(),
         // Prevent Git from trying to read /etc/gitconfig in Snap environments
         // where it may not be accessible or writable
-        GIT_CONFIG_SYSTEM: '',
+        GIT_CONFIG_SYSTEM: process.env.HOME ? `${process.env.HOME}/.gitconfig` : '',
         ...sshEnv,
       })
     } catch (e) {
