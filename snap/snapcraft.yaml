@@ -14,7 +14,6 @@ parts:
     override-build: |
       dpkg -x $SNAPCRAFT_PART_SRC/gitpeach-desktop_3.5.2_amd64.deb $SNAPCRAFT_PART_INSTALL
       chmod 0755 $SNAPCRAFT_PART_INSTALL/usr/lib/gitpeach-desktop/chrome-sandbox
-      sed -i 's/path=\/etc\/gitconfig/# path=\/etc\/gitconfig/' $SNAPCRAFT_PART_INSTALL/usr/lib/gitpeach-desktop/resources/app/git/etc/gitconfig
       sed -i 's/Icon=gitpeach-desktop/Icon=\/usr\/share\/icons\/hicolor\/256x256\/apps\/gitpeach-desktop.png/' $SNAPCRAFT_PART_INSTALL/usr/share/applications/gitpeach-desktop.desktop
     stage-packages:
       - libasound2t64
@@ -114,3 +113,10 @@ apps:
       - opengl
       - removable-media
       - password-manager-service
+      - system-files
+
+plugs:
+  system-files:
+    interface: system-files
+    read:
+    - /etc/gitconfig
