@@ -113,3 +113,4 @@ apps:
       - browser-support
       - opengl
       - removable-media
+      - password-manager-service
