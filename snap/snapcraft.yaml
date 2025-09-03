@@ -112,3 +112,10 @@ apps:
       - browser-support
       - opengl
       - removable-media
+      - system-files
+
+plugs:
+  system-files:
+    interface: system-files
+    read:
+      - /etc/gitconfig
