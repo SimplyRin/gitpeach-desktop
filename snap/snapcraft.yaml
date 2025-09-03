@@ -120,3 +120,6 @@ plugs:
     interface: system-files
     read:
     - /etc/gitconfig
+    # This plug allows the application to read system-wide Git configuration from /etc/gitconfig,
+    # enabling users to utilize their system-defined Git settings (e.g., global user name, email, or proxy settings).
+    # This is essential for seamless integration with existing Git environments and avoids conflicts with user preferences.
