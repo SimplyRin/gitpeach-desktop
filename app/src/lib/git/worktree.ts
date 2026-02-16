@@ -1,3 +1,5 @@
+import * as Path from 'path'
+import * as Fs from 'fs'
 import type { Repository } from '../../models/repository'
 import type { WorktreeEntry, WorktreeType } from '../../models/worktree'
 import { git } from './core'
@@ -131,6 +133,21 @@ export async function getMainWorktreePath(
   const worktrees = await listWorktrees(repository)
   const main = worktrees.find(wt => wt.type === 'main')
   return main?.path ?? null
+}
+
+/**
+ * Synchronously checks if a repository path is a linked worktree by examining
+ * whether `.git` is a file (linked worktree) or directory (main worktree).
+ */
+export function isLinkedWorktreeSync(repositoryPath: string): boolean {
+  try {
+    const dotGit = Path.join(repositoryPath, '.git')
+    // eslint-disable-next-line no-sync
+    const stats = Fs.statSync(dotGit)
+    return stats.isFile()
+  } catch {
+    return false
+  }
 }
 
 function normalizePath(p: string): string {
