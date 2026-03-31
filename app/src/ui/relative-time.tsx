@@ -60,7 +60,7 @@ export function getRelativeTimeInfoFromDate(
   if (diff > 0 && duration > MINUTE) {
     return {
       absoluteText,
-      relativeText: formatDate(then),
+      relativeText: absoluteText,
       duration,
     }
   } else if (duration < MINUTE) {
