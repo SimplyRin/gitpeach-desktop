@@ -12,6 +12,7 @@ import {
   SignInStore,
   UpstreamRemoteName,
 } from '.'
+import type { CopilotFeature, CopilotModelSelections } from './copilot-store'
 import { Account, isDotComAccount } from '../../models/account'
 import { AppMenu, IMenu } from '../../models/app-menu'
 import { Author } from '../../models/author'
@@ -137,6 +138,7 @@ import {
   ICompareState,
   CommitOptions,
 } from '../app-state'
+import type { ModelInfo } from '@github/copilot-sdk'
 import {
   findEditorOrDefault,
   getAvailableEditors,
@@ -477,6 +479,8 @@ const commitMessageGenerationButtonClickedKey =
   'commit-message-generation-button-clicked'
 
 export const showChangesFilterKey = 'show-changes-filter'
+
+const selectedCopilotModelsKey = 'selected-copilot-models'
 export const showChangesFilterDefault = true
 
 export class AppStore extends TypedBaseStore<IAppState> {
@@ -637,6 +641,9 @@ export class AppStore extends TypedBaseStore<IAppState> {
   private commitMessageGenerationButtonClicked: boolean = false
 
   private showChangesFilter: boolean = false
+
+  private selectedCopilotModels: CopilotModelSelections = {}
+  private copilotModels: ReadonlyArray<ModelInfo> | null = null
 
   public constructor(
     private readonly gitHubUserStore: GitHubUserStore,
@@ -958,6 +965,13 @@ export class AppStore extends TypedBaseStore<IAppState> {
     // updateStore is a global, App.tsx handles most of it but we carry the
     // UpdateState in the AppState so we need to emit whenever it updates.
     updateStore.onDidChange(() => this.emitUpdate())
+
+    this.copilotStore.onDidUpdate(() => {
+      this.copilotModels = this.copilotStore.isAvailable
+        ? this.copilotStore.cachedModelList ?? this.copilotModels
+        : null
+      this.emitUpdate()
+    })
   }
 
   /** Load the emoji from disk. */
@@ -1141,6 +1155,9 @@ export class AppStore extends TypedBaseStore<IAppState> {
       commitMessageGenerationButtonClicked:
         this.commitMessageGenerationButtonClicked,
       showChangesFilter: this.showChangesFilter,
+      selectedCopilotModels: this.selectedCopilotModels,
+      copilotModels: this.copilotModels,
+      copilotAvailable: this.copilotStore.isAvailable,
     }
   }
 
@@ -2402,6 +2419,8 @@ export class AppStore extends TypedBaseStore<IAppState> {
       showChangesFilterKey,
       showChangesFilterDefault
     )
+
+    this.selectedCopilotModels = this.loadCopilotModelSelections()
 
     this.emitUpdateNow()
 
@@ -5674,7 +5693,11 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
       try {
         const response = enableCopilotSdkCommitMessageGeneration(account)
-          ? await this.copilotStore.generateCommitMessage(diff, repository.path)
+          ? await this.copilotStore.generateCommitMessage(
+              diff,
+              repository.path,
+              this.selectedCopilotModels['commit-message-generation'] ?? null
+            )
           : await API.fromAccount(account).getDiffChangesCommitMessage(diff)
 
         this._setCommitMessage(repository, {
@@ -8572,6 +8595,78 @@ export class AppStore extends TypedBaseStore<IAppState> {
   }
 
   /** This shouldn't be called directly. See 'Dispatcher'. */
+  public _setSelectedCopilotModel(
+    feature: CopilotFeature,
+    model: string | null
+  ) {
+    const current = this.selectedCopilotModels[feature] ?? null
+    if (model !== current) {
+      if (model === null) {
+        const updated = { ...this.selectedCopilotModels }
+        delete updated[feature]
+        this.selectedCopilotModels = updated
+      } else {
+        this.selectedCopilotModels = {
+          ...this.selectedCopilotModels,
+          [feature]: model,
+        }
+      }
+      this.saveCopilotModelSelections()
+    }
+  }
+
+  private loadCopilotModelSelections(): CopilotModelSelections {
+    const raw = localStorage.getItem(selectedCopilotModelsKey)
+    if (raw !== null) {
+      try {
+        const parsed: unknown = JSON.parse(raw)
+        if (typeof parsed === 'object' && parsed !== null) {
+          return parsed as CopilotModelSelections
+        }
+      } catch {
+        // fall through to migration
+      }
+    }
+
+    // Migrate from the old single-model key
+    const legacy = localStorage.getItem('selected-copilot-model')
+    if (legacy !== null) {
+      localStorage.removeItem('selected-copilot-model')
+      const selections: CopilotModelSelections = {
+        'commit-message-generation': legacy,
+      }
+      localStorage.setItem(selectedCopilotModelsKey, JSON.stringify(selections))
+      return selections
+    }
+
+    return {}
+  }
+
+  private saveCopilotModelSelections() {
+    const keys = Object.keys(this.selectedCopilotModels)
+    if (keys.length === 0) {
+      localStorage.removeItem(selectedCopilotModelsKey)
+    } else {
+      localStorage.setItem(
+        selectedCopilotModelsKey,
+        JSON.stringify(this.selectedCopilotModels)
+      )
+    }
+  }
+
+  /** This shouldn't be called directly. See 'Dispatcher'. */
+  public _setSelectedCopilotModels(models: CopilotModelSelections) {
+    this.selectedCopilotModels = { ...models }
+    this.saveCopilotModelSelections()
+  }
+
+  /** This shouldn't be called directly. See 'Dispatcher'. */
+  public async _fetchCopilotModels(): Promise<void> {
+    const models = await this.copilotStore.listModels()
+    this.copilotModels = [...models]
+    this.emitUpdate()
+  }
+
   public _setPreferAbsoluteDates(value: boolean) {
     if (value !== this.preferAbsoluteDates) {
       this.preferAbsoluteDates = value
