@@ -172,46 +172,6 @@ export class CopilotPreferences extends React.Component<ICopilotPreferencesProps
         ) : (
           <ul className="copilot-byok-entry-list">
             {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
-            {byokProviders.map(this.renderBYOKProvider)}
           </ul>
         )}
         <Button onClick={this.onAddBYOKProviderClick}>
