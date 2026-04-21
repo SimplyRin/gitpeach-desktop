@@ -58,10 +58,10 @@ export interface ICopilotConflictContext {
   readonly files: ReadonlyArray<IFileConflictContext>
 }
 
-const oursMarker = /^<{7}\s?/
-const baseMarker = /^\|{7}\s?/
+const oursMarker = /^<{7}(?:\s|$)/
+const baseMarker = /^\|{7}(?:\s|$)/
 const separatorMarker = /^={7}$/
-const theirsMarker = /^>{7}\s?/
+const theirsMarker = /^>{7}(?:\s|$)/
 
 /** Maximum file size (in characters) to include in conflict context */
 const MAX_CONFLICT_FILE_SIZE = 1_048_576
