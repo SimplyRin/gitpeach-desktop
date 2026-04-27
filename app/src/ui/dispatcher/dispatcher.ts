@@ -4111,26 +4111,41 @@ export class Dispatcher {
    * Add a new BYOK Copilot provider. The secret (API key / bearer token)
    * is stored separately in the OS keychain.
    */
-  public addCopilotBYOKProvider(
+  public async addCopilotBYOKProvider(
     provider: IBYOKProvider,
     secret: string | null
   ): Promise<void> {
-    return this.appStore._addCopilotBYOKProvider(provider, secret)
+    try {
+      await this.appStore._addCopilotBYOKProvider(provider, secret)
+    } catch (e) {
+      log.error(`Error adding BYOK Copilot provider '${provider.name}'`, e)
+      this.postError(e)
+    }
   }
 
   /**
    * Update a BYOK Copilot provider. Pass `secret = undefined` to leave the
    * stored secret untouched, `null` to clear it, or a string to overwrite it.
    */
-  public updateCopilotBYOKProvider(
+  public async updateCopilotBYOKProvider(
     provider: IBYOKProvider,
     secret: string | null | undefined
   ): Promise<void> {
-    return this.appStore._updateCopilotBYOKProvider(provider, secret)
+    try {
+      await this.appStore._updateCopilotBYOKProvider(provider, secret)
+    } catch (e) {
+      log.error(`Error updating BYOK Copilot provider '${provider.name}'`, e)
+      this.postError(e)
+    }
   }
 
   /** Remove a BYOK Copilot provider and its stored secret. */
-  public deleteCopilotBYOKProvider(id: string): Promise<void> {
-    return this.appStore._deleteCopilotBYOKProvider(id)
+  public async deleteCopilotBYOKProvider(id: string): Promise<void> {
+    try {
+      await this.appStore._deleteCopilotBYOKProvider(id)
+    } catch (e) {
+      log.error(`Error deleting BYOK Copilot provider '${id}'`, e)
+      this.postError(e)
+    }
   }
 }
