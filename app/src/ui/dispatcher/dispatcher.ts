@@ -1125,11 +1125,21 @@ export class Dispatcher {
   }
 
   /**
-   * Start the full Copilot conflict resolution flow: call the API, apply
-   * resolved content to disk, stage files, and transition to the result dialog.
+   * Start the full Copilot conflict resolution flow: call the API and
+   * transition to the result dialog.
    */
   public startCopilotConflictResolution(repository: Repository): Promise<void> {
     return this.appStore._startCopilotConflictResolution(repository)
+  }
+
+  /**
+   * Write Copilot-resolved file contents to disk and stage them.
+   * Called when the user confirms the resolutions (clicks "Continue Merge").
+   */
+  public applyCopilotConflictResolutions(
+    repository: Repository
+  ): Promise<void> {
+    return this.appStore._applyCopilotConflictResolutions(repository)
   }
 
   /** Remove the given account from the app. */

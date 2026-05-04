@@ -22,13 +22,21 @@ export abstract class Merge extends BaseMultiCommitOperation {
     } = this.props
 
     if (
-      state.step.kind !== MultiCommitOperationStepKind.ShowConflicts ||
+      (state.step.kind !== MultiCommitOperationStepKind.ShowConflicts &&
+        state.step.kind !== MultiCommitOperationStepKind.ShowCopilotConflicts) ||
       conflictState === null ||
       !isMergeConflictState(conflictState) ||
       operationDetail.kind !== MultiCommitOperationKind.Merge
     ) {
       this.endFlowInvalidState()
       return
+    }
+
+    // If continuing from Copilot resolution, write files to disk and stage now
+    if (
+      state.step.kind === MultiCommitOperationStepKind.ShowCopilotConflicts
+    ) {
+      await dispatcher.applyCopilotConflictResolutions(repository)
     }
 
     const { theirBranch } = state.step.conflictState

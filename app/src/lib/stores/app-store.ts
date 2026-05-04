@@ -5914,28 +5914,9 @@ export class AppStore extends TypedBaseStore<IAppState> {
         throw new Error('Copilot conflict resolution returned no results')
       }
 
-      // Write resolved content to disk and stage each file
-      for (const resolution of result.resolutions) {
-        const absolutePath = await resolveWithin(
-          repository.path,
-          resolution.path
-        )
-        if (absolutePath === null) {
-          log.warn(
-            `Copilot resolution skipped: path outside repository: ${resolution.path}`
-          )
-          continue
-        }
-
-        await writeFile(absolutePath, resolution.resolvedContent, 'utf8')
-        await git(
-          ['add', '--', resolution.path],
-          repository.path,
-          'copilotConflictResolution'
-        )
-      }
-
-      // Store resolutions and transition to the result dialog
+      // Store resolutions and transition to the result dialog.
+      // Files are NOT written to disk yet — that happens when the user
+      // clicks "Continue Merge" (see _applyCopilotConflictResolutions).
       this.repositoryStateCache.updateMultiCommitOperationState(
         repository,
         () => ({
@@ -5965,6 +5946,48 @@ export class AppStore extends TypedBaseStore<IAppState> {
       )
 
       this.emitUpdate()
+    }
+  }
+
+  /**
+   * Write Copilot-resolved file contents to disk and stage them.
+   * Called when the user clicks "Continue Merge" from the Copilot conflicts
+   * result dialog.
+   *
+   * This shouldn't be called directly. See `Dispatcher`.
+   */
+  public async _applyCopilotConflictResolutions(
+    repository: Repository
+  ): Promise<void> {
+    const state = this.repositoryStateCache.get(repository)
+    const { multiCommitOperationState } = state
+    if (multiCommitOperationState === null) {
+      return
+    }
+
+    const { copilotResolutions } = multiCommitOperationState
+    if (copilotResolutions === null || copilotResolutions.length === 0) {
+      return
+    }
+
+    for (const resolution of copilotResolutions) {
+      const absolutePath = await resolveWithin(
+        repository.path,
+        resolution.path
+      )
+      if (absolutePath === null) {
+        log.warn(
+          `Copilot resolution skipped: path outside repository: ${resolution.path}`
+        )
+        continue
+      }
+
+      await writeFile(absolutePath, resolution.resolvedContent, 'utf8')
+      await git(
+        ['add', '--', resolution.path],
+        repository.path,
+        'copilotConflictResolution'
+      )
     }
   }
 
