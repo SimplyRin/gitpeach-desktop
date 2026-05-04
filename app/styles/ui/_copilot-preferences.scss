@@ -93,9 +93,6 @@
     }
   }
 
-  // Introductory hint shown above the Copilot feature pickers. Uses the
-  // standard body text color/size (rather than the muted subtitle styling of
-  // `.settings-description`) so it reads as primary instructional text.
   .copilot-feature-hint {
     p {
       margin: 0;
