@@ -93,24 +93,10 @@
     }
   }
 
-  .copilot-customization-hints {
-    margin-top: var(--spacing);
-    color: var(--text-secondary-color);
-    font-size: var(--font-size-sm);
-
-    p {
-      margin: 0 0 var(--spacing-half);
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-  }
-
   // Introductory hint shown above the Copilot feature pickers. Uses the
   // standard body text color/size (rather than the muted subtitle styling of
-  // `.copilot-customization-hints`) so it reads as primary instructional text.
-  .copilot-customization-hints-intro {
+  // `.settings-description`) so it reads as primary instructional text.
+  .copilot-feature-hint {
     p {
       margin: 0;
     }
