@@ -26,6 +26,7 @@ import { IAPIComment } from '../lib/api'
 import { ISecretScanResult } from '../ui/secret-scanning/push-protection-error-dialog'
 import { BypassReasonType } from '../ui/secret-scanning/bypass-push-protection-dialog'
 import { TerminalOutput, TerminalOutputListener } from '../lib/git'
+import type { IBYOKModel, IBYOKProvider } from '../lib/copilot/byok'
 
 export enum PopupType {
   RenameBranch = 'RenameBranch',
@@ -110,13 +111,16 @@ export enum PopupType {
   AddWorktree = 'AddWorktree',
   RenameWorktree = 'RenameWorktree',
   DeleteWorktree = 'DeleteWorktree',
+  EditCopilotBYOKProvider = 'EditCopilotBYOKProvider',
+  EditCopilotBYOKModel = 'EditCopilotBYOKModel',
+  ConfirmDeleteCopilotBYOKProvider = 'ConfirmDeleteCopilotBYOKProvider',
 }
 
 interface IBasePopup {
   /**
    * Unique id of the popup that it receives upon adding to the stack.
    */
-  readonly id?: string
+  readonly id?: number
 }
 
 export type PopupDetail =
@@ -147,6 +151,20 @@ export type PopupDetail =
       selection: DiffSelection
     }
   | { type: PopupType.Preferences; initialSelectedTab?: PreferencesTab }
+  | {
+      type: PopupType.EditCopilotBYOKProvider
+      provider: IBYOKProvider | null
+    }
+  | {
+      type: PopupType.EditCopilotBYOKModel
+      model: IBYOKModel | null
+      otherModelIds: ReadonlyArray<string>
+      onSave: (model: IBYOKModel) => void
+    }
+  | {
+      type: PopupType.ConfirmDeleteCopilotBYOKProvider
+      provider: IBYOKProvider
+    }
   | {
       type: PopupType.RepositorySettings
       repository: Repository
