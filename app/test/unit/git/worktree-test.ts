@@ -14,8 +14,7 @@ describe('git/worktree', () => {
         'worktree /path/to/repo',
         'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
         'branch refs/heads/main',
-        '',
-      ].join('\n')
+      ].join('\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries.length, 1)
@@ -32,15 +31,17 @@ describe('git/worktree', () => {
 
     it('parses multiple worktrees', () => {
       const output = [
-        'worktree /path/to/repo',
-        'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
-        'branch refs/heads/main',
-        '',
-        'worktree /path/to/linked',
-        'HEAD def5678def5678def5678def5678def5678def567',
-        'branch refs/heads/feature',
-        '',
-      ].join('\n')
+        [
+          'worktree /path/to/repo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/linked',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'branch refs/heads/feature',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries.length, 2)
@@ -55,15 +56,17 @@ describe('git/worktree', () => {
 
     it('parses detached HEAD worktree', () => {
       const output = [
-        'worktree /path/to/repo',
-        'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
-        'branch refs/heads/main',
-        '',
-        'worktree /path/to/detached',
-        'HEAD def5678def5678def5678def5678def5678def567',
-        'detached',
-        '',
-      ].join('\n')
+        [
+          'worktree /path/to/repo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/detached',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'detached',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries.length, 2)
@@ -74,16 +77,18 @@ describe('git/worktree', () => {
 
     it('parses locked worktree', () => {
       const output = [
-        'worktree /path/to/repo',
-        'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
-        'branch refs/heads/main',
-        '',
-        'worktree /path/to/locked-wt',
-        'HEAD def5678def5678def5678def5678def5678def567',
-        'branch refs/heads/locked-branch',
-        'locked',
-        '',
-      ].join('\n')
+        [
+          'worktree /path/to/repo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/locked-wt',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'branch refs/heads/locked-branch',
+          'locked',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries[1].isLocked, true)
@@ -91,16 +96,18 @@ describe('git/worktree', () => {
 
     it('parses locked worktree with reason', () => {
       const output = [
-        'worktree /path/to/repo',
-        'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
-        'branch refs/heads/main',
-        '',
-        'worktree /path/to/locked-wt',
-        'HEAD def5678def5678def5678def5678def5678def567',
-        'branch refs/heads/locked-branch',
-        'locked reason why it is locked',
-        '',
-      ].join('\n')
+        [
+          'worktree /path/to/repo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/locked-wt',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'branch refs/heads/locked-branch',
+          'locked reason why it is locked',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries[1].isLocked, true)
@@ -108,16 +115,18 @@ describe('git/worktree', () => {
 
     it('parses prunable worktree', () => {
       const output = [
-        'worktree /path/to/repo',
-        'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
-        'branch refs/heads/main',
-        '',
-        'worktree /path/to/prunable-wt',
-        'HEAD def5678def5678def5678def5678def5678def567',
-        'branch refs/heads/stale',
-        'prunable gitdir file points to non-existent location',
-        '',
-      ].join('\n')
+        [
+          'worktree /path/to/repo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/prunable-wt',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'branch refs/heads/stale',
+          'prunable gitdir file points to non-existent location',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries[1].isPrunable, true)
@@ -125,15 +134,17 @@ describe('git/worktree', () => {
 
     it('parses paths with spaces', () => {
       const output = [
-        'worktree /path/to/my repo',
-        'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
-        'branch refs/heads/main',
-        '',
-        'worktree /path/to/my other worktree',
-        'HEAD def5678def5678def5678def5678def5678def567',
-        'branch refs/heads/feature',
-        '',
-      ].join('\n')
+        [
+          'worktree /path/to/my repo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/my other worktree',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'branch refs/heads/feature',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries[0].path, '/path/to/my repo')
@@ -142,23 +153,44 @@ describe('git/worktree', () => {
 
     it('parses worktree with locked and prunable flags combined', () => {
       const output = [
-        'worktree /path/to/repo',
-        'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
-        'branch refs/heads/main',
-        '',
-        'worktree /path/to/bad-wt',
-        'HEAD def5678def5678def5678def5678def5678def567',
-        'detached',
-        'locked',
-        'prunable',
-        '',
-      ].join('\n')
+        [
+          'worktree /path/to/repo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/bad-wt',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'detached',
+          'locked',
+          'prunable',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
 
       const entries = parseWorktreePorcelainOutput(output)
       assert.strictEqual(entries[1].isDetached, true)
       assert.strictEqual(entries[1].isLocked, true)
       assert.strictEqual(entries[1].isPrunable, true)
       assert.strictEqual(entries[1].branch, null)
+    })
+
+    it('parses paths with newlines', () => {
+      const output = [
+        [
+          'worktree /path/to/my\nrepo',
+          'HEAD abc1234abc1234abc1234abc1234abc1234abc123',
+          'branch refs/heads/main',
+        ].join('\0'),
+        [
+          'worktree /path/to/my\nother\nworktree',
+          'HEAD def5678def5678def5678def5678def5678def567',
+          'branch refs/heads/feature',
+        ].join('\0'),
+      ].join('\0\0') + '\0'
+
+      const entries = parseWorktreePorcelainOutput(output)
+      assert.strictEqual(entries[0].path, '/path/to/my\nrepo')
+      assert.strictEqual(entries[1].path, '/path/to/my\nother\nworktree')
     })
   })
 })

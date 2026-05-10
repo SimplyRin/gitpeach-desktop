@@ -11,11 +11,13 @@ export function parseWorktreePorcelainOutput(
     return []
   }
 
-  const blocks = stdout.trim().split('\n\n')
+  // With -z, worktree blocks are separated by double NUL and fields within
+  // a block are separated by single NUL
+  const blocks = stdout.replace(/\0$/, '').split('\0\0')
   const entries: WorktreeEntry[] = []
 
   for (let i = 0; i < blocks.length; i++) {
-    const lines = blocks[i].split('\n')
+    const lines = blocks[i].split('\0')
     let path = ''
     let head = ''
     let branch: string | null = null
@@ -55,7 +57,7 @@ export async function listWorktrees(
   repository: Repository
 ): Promise<ReadonlyArray<WorktreeEntry>> {
   const result = await git(
-    ['worktree', 'list', '--porcelain'],
+    ['worktree', 'list', '--porcelain', '-z'],
     repository.path,
     'listWorktrees'
   )
