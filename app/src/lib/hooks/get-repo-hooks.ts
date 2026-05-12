@@ -1,6 +1,7 @@
 import { exec } from 'dugite'
 import { access, constants, readdir } from 'fs/promises'
 import { basename, join, resolve } from 'path'
+import { getGitDir } from '../git'
 
 const isExecutable = (path: string) =>
   access(path, constants.X_OK)
@@ -50,7 +51,7 @@ const knownHooks = [
  */
 export async function* getRepoHooks(
   path: string,
-  gitDir: string,
+  gitDir: string | undefined,
   filter?: string[]
 ) {
   const { exitCode, stdout } = await exec(
@@ -61,7 +62,10 @@ export async function* getRepoHooks(
   const hooksPath =
     exitCode === 0
       ? resolve(path, stdout.split('\0')[0])
-      : join(gitDir, 'hooks')
+      : join(
+          gitDir ?? (await getGitDir(path)) ?? resolve(path, '.git'),
+          'hooks'
+        )
 
   const files = await readdir(hooksPath, { withFileTypes: true })
     .then(entries => entries.filter(x => x.isFile()))

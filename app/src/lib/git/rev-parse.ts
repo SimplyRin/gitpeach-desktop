@@ -61,6 +61,18 @@ export async function getRepositoryType(path: string): Promise<RepositoryType> {
   }
 }
 
+export const getGitDir = async (path: string) => {
+  const result = await git(['rev-parse', '--git-dir'], path, 'getGitDir', {
+    successExitCodes: new Set([0, 128]),
+  })
+
+  if (result.exitCode === 0) {
+    return resolve(path, result.stdout.trim())
+  }
+
+  return null
+}
+
 export async function getUpstreamRefForRef(path: string, ref?: string) {
   const rev = (ref ?? '') + '@{upstream}'
   const args = ['rev-parse', '--symbolic-full-name', rev]
