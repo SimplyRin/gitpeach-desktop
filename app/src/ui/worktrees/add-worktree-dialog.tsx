@@ -22,8 +22,7 @@ interface IAddWorktreeDialogProps {
 }
 
 interface IAddWorktreeDialogState {
-  readonly name: string
-  readonly path: string | null
+  readonly fullPath: string | null
   readonly branchName: string
   readonly creating: boolean
 }
@@ -41,24 +40,14 @@ export class AddWorktreeDialog extends React.Component<
     super(props)
 
     this.state = {
-      name: '',
-      path: null,
+      fullPath: null,
       branchName: props.initialBranchName ?? '',
       creating: false,
     }
   }
 
-  public async componentDidMount() {
-    const path = await RepositoryPath.getDefaultPath()
-    this.setState(s => (s.path === null ? { path } : null))
-  }
-
-  private onNameChanged = (name: string) => {
-    this.setState({ name })
-  }
-
-  private onPathChanged = (path: string) => {
-    this.setState({ path })
+  private onFullPathChanged = (fullPath: string | null) => {
+    this.setState({ fullPath })
   }
 
   private onBranchNameChanged = (branchName: string) => {
@@ -69,17 +58,8 @@ export class AddWorktreeDialog extends React.Component<
     return this.props.allBranches.some(b => b.name === name)
   }
 
-  private getFullPath(): string | null {
-    const { path, name } = this.state
-    if (path === null || name.trim().length === 0) {
-      return null
-    }
-    return RepositoryPath.getFullPath(path, name)
-  }
-
   private onSubmit = async () => {
-    const fullPath = this.getFullPath()
-    const { branchName } = this.state
+    const { fullPath, branchName } = this.state
 
     if (fullPath === null) {
       return
@@ -138,7 +118,7 @@ export class AddWorktreeDialog extends React.Component<
   }
 
   private renderPathMessage() {
-    const fullPath = this.getFullPath()
+    const { fullPath } = this.state
     if (fullPath === null) {
       return null
     }
@@ -151,9 +131,7 @@ export class AddWorktreeDialog extends React.Component<
   }
 
   public render() {
-    const fullPath = this.getFullPath()
-    const disabled = fullPath === null || this.state.creating
-    const loadingPath = this.state.path === null
+    const disabled = this.state.fullPath === null || this.state.creating
 
     return (
       <Dialog
@@ -165,13 +143,9 @@ export class AddWorktreeDialog extends React.Component<
       >
         <DialogContent>
           <RepositoryPath
-            name={this.state.name}
-            path={this.state.path}
-            onNameChanged={this.onNameChanged}
-            onPathChanged={this.onPathChanged}
+            onFullPathChanged={this.onFullPathChanged}
             nameLabel={__DARWIN__ ? 'Worktree Name' : 'Worktree name'}
             namePlaceholder="worktree name"
-            pathLabel={__DARWIN__ ? 'Local Path' : 'Local path'}
             pathPlaceholder="worktree path"
           />
 
@@ -192,7 +166,7 @@ export class AddWorktreeDialog extends React.Component<
           {this.renderPathMessage()}
           <OkCancelButtonGroup
             okButtonText={__DARWIN__ ? 'Create Worktree' : 'Create worktree'}
-            okButtonDisabled={disabled || loadingPath}
+            okButtonDisabled={disabled}
           />
         </DialogFooter>
       </Dialog>

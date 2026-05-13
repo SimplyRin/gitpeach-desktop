@@ -25,20 +25,27 @@ const safeDirectoryName = (name: string) => {
 }
 
 interface IRepositoryPathProps {
-  /** The current name value. */
-  readonly name: string
-
-  /** The current path value, or null if still loading. */
-  readonly path: string | null
+  /** Initial name value. Defaults to ''. */
+  readonly initialName?: string
 
   /**
-   * Called when the name changes. The consumer receives the raw name;
-   * use `RepositoryPath.getSafeDirectoryName` to get a sanitized version.
+   * Initial base path value. When null or undefined the component will
+   * load the user's default directory on mount.
    */
-  readonly onNameChanged: (name: string) => void
+  readonly initialPath?: string | null
 
-  /** Called when the path changes. */
-  readonly onPathChanged: (path: string) => void
+  /**
+   * Called whenever the resolved full path changes. The full path is
+   * `Path.join(path, safeDirectoryName(name))`, or `null` when the name
+   * is empty or the path has not yet loaded.
+   */
+  readonly onFullPathChanged: (fullPath: string | null) => void
+
+  /** Called when the name changes. */
+  readonly onNameChanged?: (name: string) => void
+
+  /** Called when the base path changes. */
+  readonly onPathChanged?: (path: string) => void
 
   /** Optional label for the name field. Defaults to "Name". */
   readonly nameLabel?: string
@@ -59,40 +66,80 @@ interface IRepositoryPathProps {
   readonly pathAriaDescribedBy?: string
 }
 
+interface IRepositoryPathState {
+  readonly name: string
+  readonly path: string | null
+}
+
 /**
  * Reusable component for the name + path fields used when creating a
- * repository or worktree directory. Handles the Choose… file picker and
- * shows a warning when the name is sanitized for the file system.
+ * repository or worktree directory. Manages its own state, loads the
+ * default directory when no initial path is provided, handles the
+ * Choose… file picker, and shows a warning when the name is sanitized
+ * for the file system.
+ *
+ * The primary output is the `onFullPathChanged` callback which emits
+ * the resolved full path or `null` when the inputs are incomplete.
  */
-export class RepositoryPath extends React.Component<IRepositoryPathProps> {
-  /**
-   * Returns the file-system-safe version of the given name.
-   * This is intentionally a static helper so that consumers can compute
-   * the sanitized name and the full resolved path without duplicating
-   * the sanitization logic.
-   */
-  public static getSafeDirectoryName(name: string): string {
-    return safeDirectoryName(name)
-  }
-
-  /**
-   * Returns the full resolved path for the given path and name.
-   */
-  public static getFullPath(path: string, name: string): string {
-    return Path.join(path, safeDirectoryName(name))
-  }
-
-  /**
-   * Initializes the path from the default directory. Call this from
-   * the parent's componentDidMount if the path is null.
-   */
-  public static async getDefaultPath(): Promise<string> {
-    return getDefaultDir()
-  }
-
+export class RepositoryPath extends React.Component<
+  IRepositoryPathProps,
+  IRepositoryPathState
+> {
   /** Persists the given path as the default directory for future use. */
   public static setDefaultPath(path: string): void {
     setDefaultDir(path)
+  }
+
+  public constructor(props: IRepositoryPathProps) {
+    super(props)
+    this.state = {
+      name: props.initialName ?? '',
+      path: props.initialPath ?? null,
+    }
+  }
+
+  public async componentDidMount() {
+    if (this.state.path === null) {
+      const path = await getDefaultDir()
+      this.setState({ path }, () => this.notifyAll())
+    } else {
+      this.notifyAll()
+    }
+  }
+
+  /**
+   * Emit the current name, path, and full path to the parent. Called
+   * once on mount (after default path loading if needed).
+   */
+  private notifyAll() {
+    const { name, path } = this.state
+    this.props.onNameChanged?.(name)
+    if (path !== null) {
+      this.props.onPathChanged?.(path)
+    }
+    this.emitFullPath()
+  }
+
+  private getFullPath(): string | null {
+    const { name, path } = this.state
+    if (path === null || path.length === 0 || name.trim().length === 0) {
+      return null
+    }
+    return Path.join(path, safeDirectoryName(name))
+  }
+
+  private emitFullPath = () => {
+    this.props.onFullPathChanged(this.getFullPath())
+  }
+
+  private onNameChanged = (name: string) => {
+    this.setState({ name }, this.emitFullPath)
+    this.props.onNameChanged?.(name)
+  }
+
+  private onPathChanged = (path: string) => {
+    this.setState({ path }, this.emitFullPath)
+    this.props.onPathChanged?.(path)
   }
 
   private showFilePicker = async () => {
@@ -104,19 +151,19 @@ export class RepositoryPath extends React.Component<IRepositoryPathProps> {
       return
     }
 
-    this.props.onPathChanged(path)
+    this.onPathChanged(path)
   }
 
   private renderSanitizedName() {
-    const sanitizedName = safeDirectoryName(this.props.name)
-    if (this.props.name === sanitizedName) {
+    const sanitizedName = safeDirectoryName(this.state.name)
+    if (this.state.name === sanitizedName) {
       return null
     }
 
     return (
       <InputWarning
         id="repo-sanitized-name-warning"
-        trackedUserInput={this.props.name}
+        trackedUserInput={this.state.name}
         ariaLiveMessage={`Will be created as ${sanitizedName}. Spaces and invalid characters have been replaced by hyphens.`}
       >
         <p>Will be created as {sanitizedName}</p>
@@ -128,16 +175,16 @@ export class RepositoryPath extends React.Component<IRepositoryPathProps> {
   }
 
   public render() {
-    const loadingPath = this.props.path === null
+    const loadingPath = this.state.path === null
 
     return (
       <>
         <Row>
           <TextBox
-            value={this.props.name}
+            value={this.state.name}
             label={this.props.nameLabel ?? 'Name'}
             placeholder={this.props.namePlaceholder ?? 'name'}
-            onValueChanged={this.props.onNameChanged}
+            onValueChanged={this.onNameChanged}
             ariaDescribedBy={this.props.nameAriaDescribedBy}
           />
         </Row>
@@ -146,12 +193,12 @@ export class RepositoryPath extends React.Component<IRepositoryPathProps> {
 
         <Row>
           <TextBox
-            value={this.props.path ?? ''}
+            value={this.state.path ?? ''}
             label={
               this.props.pathLabel ?? (__DARWIN__ ? 'Local Path' : 'Local path')
             }
             placeholder={this.props.pathPlaceholder ?? 'path'}
-            onValueChanged={this.props.onPathChanged}
+            onValueChanged={this.onPathChanged}
             disabled={loadingPath}
             ariaDescribedBy={this.props.pathAriaDescribedBy}
           />
