@@ -425,23 +425,25 @@ export class CopilotStore extends BaseStore {
     // CLI fails to parse the arguments correctly, so we ended up using --eval
     // and just importing the index.js from the CLI as a workaround.
     const cliDir = getCopilotCLIDir()
-    let importPath = join(cliDir, 'index.js')
-
-    if (__WIN32__) {
-      // On Windows, we need the import path to be a valid file:// URL.
-      importPath = pathToFileURL(importPath).href
-    }
+    const indexPath = join(cliDir, 'index.js')
 
     // Make sure the import path exists before creating the client, so we don't
-    // end up with a half-broken client that can't start.
-    const exists = await pathExists(importPath)
-    if (!exists) {
+    // end up with a half-broken client that can't start. We check the
+    // filesystem path here, before converting it to a file:// URL on Windows,
+    // because `fs.access` doesn't accept URL-form strings.
+    if (!(await pathExists(indexPath))) {
       throw new Error('Cannot create Copilot client: CLI entry point not found')
     }
 
+    // On Windows, `import` requires a valid file:// URL rather than a bare
+    // absolute path.
+    const importSpecifier = __WIN32__
+      ? pathToFileURL(indexPath).href
+      : indexPath
+
     return new CopilotClient({
       cliPath: await getCopilotCLIPath(),
-      cliArgs: ['--eval', `import '${importPath}'`, '--'],
+      cliArgs: ['--eval', `import '${importSpecifier}'`, '--'],
       env: {
         ELECTRON_RUN_AS_NODE: '1',
         COPILOT_RUN_APP: '1',
