@@ -1,11 +1,17 @@
-import { CopilotClient } from '@github/copilot-sdk'
-import type { ModelInfo, SessionConfig } from '@github/copilot-sdk'
+import { CopilotClient, CopilotSession } from '@github/copilot-sdk'
+import type {
+  AssistantMessageEvent,
+  MessageOptions,
+  ModelInfo,
+  SessionConfig,
+} from '@github/copilot-sdk'
 import { AccountsStore } from './accounts-store'
 import { Account, isDotComAccount } from '../../models/account'
 import {
   ICopilotCommitMessage,
   parseCopilotCommitMessage,
 } from '../copilot-commit-message'
+import { getCopilotPaymentRequiredErrorFromSessionError } from '../copilot-error'
 import {
   CopilotValidationError,
   ConflictResolutionSystemPrompt,
@@ -32,6 +38,8 @@ import { pathToFileURL } from 'url'
 import { randomBytes } from 'crypto'
 import { BaseStore } from './base-store'
 import { IRepoRulesMetadataRule } from '../../models/repo-rules'
+import { pathExists } from '../path-exists'
+import { enableCopilotSdkCommitMessageGeneration } from '../feature-flag'
 
 /** The default model ID used for Copilot commit message generation. */
 export const DefaultCopilotModel = 'gpt-5-mini'
@@ -418,16 +426,25 @@ export class CopilotStore extends BaseStore {
     // CLI fails to parse the arguments correctly, so we ended up using --eval
     // and just importing the index.js from the CLI as a workaround.
     const cliDir = getCopilotCLIDir()
-    let importPath = join(cliDir, 'index.js')
+    const indexPath = join(cliDir, 'index.js')
 
-    if (__WIN32__) {
-      // On Windows, we need the import path to be a valid file:// URL.
-      importPath = pathToFileURL(importPath).href
+    // Make sure the import path exists before creating the client, so we don't
+    // end up with a half-broken client that can't start. We check the
+    // filesystem path here, before converting it to a file:// URL on Windows,
+    // because `fs.access` doesn't accept URL-form strings.
+    if (!(await pathExists(indexPath))) {
+      throw new Error('Cannot create Copilot client: CLI entry point not found')
     }
+
+    // On Windows, `import` requires a valid file:// URL rather than a bare
+    // absolute path.
+    const importSpecifier = __WIN32__
+      ? pathToFileURL(indexPath).href
+      : indexPath
 
     return new CopilotClient({
       cliPath: await getCopilotCLIPath(),
-      cliArgs: ['--eval', `import '${importPath}'`, '--'],
+      cliArgs: ['--eval', `import '${importSpecifier}'`, '--'],
       env: {
         ELECTRON_RUN_AS_NODE: '1',
         COPILOT_RUN_APP: '1',
@@ -446,6 +463,48 @@ export class CopilotStore extends BaseStore {
       await client.stop()
     } catch (e) {
       log.error('CopilotStore: Error stopping client', e)
+    }
+  }
+
+  /**
+   * Sends a prompt on the given session and waits for the assistant
+   * response, while capturing any `session.error` events emitted during
+   * the round-trip.
+   *
+   * If the SDK emits a `session.error` whose upstream HTTP status code is
+   * 402 (Payment Required), the corresponding `CopilotError` is thrown
+   * instead of whatever {@link CopilotSession.sendAndWait} would have
+   * rejected with — the underlying rejection is intentionally swallowed
+   * because the SDK surfaces the same failure twice (once on the event
+   * channel, once on the awaited promise) and only the parsed 402 error
+   * carries actionable billing metadata for the UI.
+   *
+   * Any other `session.error` event is logged and otherwise ignored so
+   * the original `sendAndWait` rejection (or success) is propagated
+   * unchanged.
+   */
+  private async sendAndWait(
+    session: CopilotSession,
+    options: MessageOptions,
+    timeoutMs: number
+  ): Promise<AssistantMessageEvent | undefined> {
+    let paymentRequiredError: Error | undefined
+
+    const unsubscribe = session.on('session.error', e => {
+      const captured = getCopilotPaymentRequiredErrorFromSessionError(e.data)
+      if (captured !== null) {
+        paymentRequiredError = captured
+      } else {
+        log.error(`CopilotStore: Session error: ${e.toString()}`)
+      }
+    })
+
+    try {
+      return await session.sendAndWait(options, timeoutMs)
+    } catch (e) {
+      throw paymentRequiredError ?? e
+    } finally {
+      unsubscribe()
     }
   }
 
@@ -539,7 +598,9 @@ export class CopilotStore extends BaseStore {
         tags,
         cleanedRuleDescriptions
       )
-      const response = await session.sendAndWait(
+
+      const response = await this.sendAndWait(
+        session,
         { prompt: userPrompt },
         timeoutMs
       )
@@ -947,7 +1008,10 @@ export class CopilotStore extends BaseStore {
    * would mean Copilot legitimately reports no models.
    */
   public async listModels(): Promise<ReadonlyArray<ModelInfo> | null> {
-    if (this.currentAccount === null) {
+    if (
+      this.currentAccount === null ||
+      !enableCopilotSdkCommitMessageGeneration(this.currentAccount)
+    ) {
       return null
     }
 
@@ -977,7 +1041,11 @@ export class CopilotStore extends BaseStore {
       return this.modelsInFlight
     }
 
-    this.modelsInFlight = this.fetchModels()
+    this.modelsInFlight = this.fetchModels().catch(e => {
+      log.warn('CopilotStore: Failed to fetch and cache models', e)
+      return null
+    })
+
     try {
       return await this.modelsInFlight
     } finally {

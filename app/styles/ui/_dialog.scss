@@ -353,6 +353,14 @@ dialog {
     }
   }
 
+  &#delete-worktree-failed {
+    max-width: 750px;
+    .xterm {
+      padding: var(--spacing);
+      margin-bottom: var(--spacing);
+    }
+  }
+
   &#app-error {
     // Use wider dialogs for raw git errors, to make sure we can display lines
     // up to 80 characters long without wrapping them.
