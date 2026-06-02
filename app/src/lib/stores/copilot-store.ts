@@ -666,9 +666,9 @@ export class CopilotStore extends BaseStore {
    * have their effort clamped to a supported value; BYOK requests pass through
    * unchanged.
    */
-  private async resolveConflictModelConfig(
+  private resolveConflictModelConfig(
     request: CopilotModelRequest | null | undefined
-  ): Promise<IResolvedConflictModelConfig> {
+  ): IResolvedConflictModelConfig {
     if (request && request.kind === 'byok') {
       return {
         modelId: request.modelId,
@@ -680,7 +680,12 @@ export class CopilotStore extends BaseStore {
 
     const requestedModelId =
       request?.kind === 'copilot' ? request.modelId : null
-    const cachedModels = await this.getCachedModels()
+    // Use whatever model metadata we already have rather than forcing a
+    // refresh: resolveConflicts is about to create its own client, so a cold
+    // fetch here would double the startup latency. It also keeps us in sync
+    // with the loading dialog, which reads the same cached list. A missing
+    // cache is treated as "metadata unavailable" (raw id, no effort).
+    const cachedModels = this.cachedModels ?? []
     const resolvedModel = requestedModelId
       ? cachedModels.find(m => m.id === requestedModelId) ?? null
       : getPreferredDefaultModel(cachedModels)
@@ -736,7 +741,7 @@ export class CopilotStore extends BaseStore {
 
     onProgress?.({ filesResolved: 0, filesTotal })
 
-    const modelConfig = await this.resolveConflictModelConfig(request)
+    const modelConfig = this.resolveConflictModelConfig(request)
 
     const clientTimer = startTimer('createClient')
     const client = await this.createClient(repositoryPath)
