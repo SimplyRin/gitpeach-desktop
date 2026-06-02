@@ -351,6 +351,200 @@ export function getPreferredDefaultModel(
 }
 
 /**
+ * Error thrown when an in-flight Copilot conflict resolution turn is cancelled
+ * by the user (via the loading dialog's "Stop" button).
+ *
+ * Distinguished from real failures so the abort isn't retried by `resolveChunk`
+ * and isn't surfaced to the user as an error.
+ */
+export class CopilotConflictResolutionAbortError extends Error {
+  // Discriminant so this subclass is structurally distinct from `Error`
+  // (an empty subclass would otherwise collapse during type narrowing).
+  public readonly isCopilotConflictResolutionAbort = true
+
+  public constructor(message = 'Copilot conflict resolution aborted') {
+    super(message)
+    this.name = 'CopilotConflictResolutionAbortError'
+  }
+}
+
+/** Type guard for {@link CopilotConflictResolutionAbortError}. */
+export function isCopilotConflictResolutionAbortError(
+  error: unknown
+): error is CopilotConflictResolutionAbortError {
+  return error instanceof CopilotConflictResolutionAbortError
+}
+
+/** Options for {@link runConflictResolutionTurn}. */
+interface IRunConflictResolutionTurnOptions {
+  /** Maximum time to wait for a complete response before timing out. */
+  readonly timeoutMs: number
+  /** Optional signal used to cancel the turn while it's in flight. */
+  readonly signal?: AbortSignal
+  /** Called with each complete sentence of the model's live reasoning. */
+  readonly onReasoningSnippet?: (snippet: string) => void
+}
+
+/**
+ * Drive a single Copilot streaming turn to completion and return the final
+ * assistant message content.
+ *
+ * Uses `send()` + `session.on()` (rather than `sendAndWait`) so the caller can
+ * stream the model's live reasoning to the UI sentence-by-sentence.
+ *
+ * Supports real cancellation via an `AbortSignal`: when the signal aborts, the
+ * turn is torn down immediately — all listeners are removed and the promise is
+ * rejected with a {@link CopilotConflictResolutionAbortError}. The session is
+ * always destroyed exactly once before this function returns, whether the turn
+ * succeeded, failed, or was aborted.
+ *
+ * Note: destroying the session tears down the local SDK turn immediately;
+ * whether the backend stops generating depends on the SDK's `destroy()`
+ * semantics.
+ */
+export async function runConflictResolutionTurn(
+  session: CopilotSession,
+  prompt: string,
+  options: IRunConflictResolutionTurnOptions
+): Promise<string> {
+  const { timeoutMs, signal, onReasoningSnippet } = options
+
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      let settled = false
+      let reasoningBuffer = ''
+
+      // Unsub handles are collected here as listeners are attached, so
+      // `cleanup()` is safe to call from any early path (e.g. an already-aborted
+      // signal, where the array is still empty).
+      const unsubs: Array<() => void> = []
+
+      // Match a sentence terminator (`.`, `!`, `?`, or newline) — when we see
+      // one, flush the accumulated reasoning text as a single user-facing
+      // snippet. Negative lookbehind for digits avoids splitting list markers
+      // like `1. ` mid-sentence.
+      const sentenceTerminator = /(?<!\d)([.!?])\s+|\n+/
+
+      const flushReasoning = (force: boolean) => {
+        while (true) {
+          const match = sentenceTerminator.exec(reasoningBuffer)
+          if (match === null) {
+            break
+          }
+          const end = match.index + match[0].length
+          const sentence = reasoningBuffer.slice(0, end).trim()
+          reasoningBuffer = reasoningBuffer.slice(end)
+          if (sentence.length > 0) {
+            if (__DEV__) {
+              log.info(`[Copilot SDK] reasoning sentence: ${sentence}`)
+            }
+            onReasoningSnippet?.(sentence)
+          }
+        }
+        if (force && reasoningBuffer.trim().length > 0) {
+          if (__DEV__) {
+            log.info(
+              `[Copilot SDK] reasoning sentence (forced): ${reasoningBuffer.trim()}`
+            )
+          }
+          onReasoningSnippet?.(reasoningBuffer.trim())
+          reasoningBuffer = ''
+        }
+      }
+
+      // Remove every subscription, the timeout, and the abort listener. Called
+      // once, from finish(), which gates on `settled`.
+      const cleanup = () => {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
+        for (const unsub of unsubs) {
+          unsub()
+        }
+      }
+
+      // Run a terminal action (resolve/reject) at most once, cleaning up first.
+      const finish = (action: () => void) => {
+        if (settled) {
+          return
+        }
+        settled = true
+        cleanup()
+        action()
+      }
+
+      const onAbort = () => {
+        finish(() => reject(new CopilotConflictResolutionAbortError()))
+      }
+
+      const timer = setTimeout(() => {
+        finish(() => reject(new Error('Copilot conflict resolution timed out')))
+      }, timeoutMs)
+
+      // If the signal already aborted before we got here, tear down now. The
+      // outer `finally` still destroys the session.
+      if (signal?.aborted) {
+        onAbort()
+        return
+      }
+      signal?.addEventListener('abort', onAbort)
+
+      // Stream the model's extended-thinking text sentence-by-sentence so the
+      // UI can show what Copilot is currently reasoning about.
+      unsubs.push(
+        session.on('assistant.reasoning_delta', event => {
+          if (__DEV__) {
+            log.info(
+              `[Copilot SDK] reasoning_delta: ${JSON.stringify(
+                event.data.deltaContent
+              )}`
+            )
+          }
+          reasoningBuffer += event.data.deltaContent
+          flushReasoning(false)
+        })
+      )
+
+      // First message_delta marks the transition into the actual response (the
+      // JSON payload). Flush any leftover reasoning so it isn't stranded —
+      // idempotent once the reasoning buffer is empty.
+      unsubs.push(
+        session.on('assistant.message_delta', () => {
+          flushReasoning(true)
+        })
+      )
+
+      // The assistant.message event contains the complete, final response
+      // content. This is the authoritative source — NOT the accumulated deltas.
+      unsubs.push(
+        session.on('assistant.message', event => {
+          const content = event.data.content
+          if (!content) {
+            finish(() => reject(new Error('No response from Copilot')))
+          } else {
+            finish(() => resolve(content))
+          }
+        })
+      )
+
+      unsubs.push(
+        session.on('session.error', event => {
+          finish(() =>
+            reject(new Error(`Copilot error: ${event.data.message}`))
+          )
+        })
+      )
+
+      // Send the prompt (fire-and-forget; events drive completion)
+      session.send({ prompt }).catch(err => {
+        finish(() => reject(err))
+      })
+    })
+  } finally {
+    await session.destroy().catch(() => {})
+  }
+}
+
+/**
  * This store manages the Copilot client lifecycle based on the user's
  * GitHub.com account. It tracks account changes and creates the client
  * lazily when a Copilot feature is used.
@@ -642,7 +836,8 @@ export class CopilotStore extends BaseStore {
     commitContext: IConflictCommitContext | null,
     pullRequest: PullRequest | null,
     repositoryPath: string,
-    onProgress?: (progress: IConflictResolutionProgress) => void
+    onProgress?: (progress: IConflictResolutionProgress) => void,
+    signal?: AbortSignal
   ): Promise<ICopilotConflictResolutionResponse> {
     const resolvableFiles = context.files.filter(f => !f.skippedReason)
     const filesTotal = resolvableFiles.length
@@ -679,7 +874,8 @@ export class CopilotStore extends BaseStore {
               filesTotal,
               reasoningSnippet,
             })
-          }
+          },
+          signal
         )
         onProgress?.({ filesResolved: filesTotal, filesTotal })
         return { resolutions }
@@ -694,6 +890,12 @@ export class CopilotStore extends BaseStore {
 
       // Process chunks with bounded concurrency
       for (let i = 0; i < chunks.length; i += MaxConcurrentChunks) {
+        // Stop starting new batches once the user has cancelled. In-flight
+        // chunks tear themselves down via their own abort handling.
+        if (signal?.aborted) {
+          throw new CopilotConflictResolutionAbortError()
+        }
+
         const batch = chunks.slice(i, i + MaxConcurrentChunks)
         const batchSettled = await Promise.allSettled(
           batch.map(chunkFiles => {
@@ -717,7 +919,8 @@ export class CopilotStore extends BaseStore {
                   filesTotal,
                   reasoningSnippet,
                 })
-              }
+              },
+              signal
             )
           })
         )
@@ -753,195 +956,68 @@ export class CopilotStore extends BaseStore {
   }
 
   /**
-   * Resolve a single chunk of files. Uses streaming events (`send()` +
-   * `session.on()`) instead of `sendAndWait` so we can report the
-   * model's live reasoning to the UI sentence-by-sentence. Retries
-   * once on parse or validation failure. Transport errors (timeouts,
-   * auth, session creation) fail fast.
+   * Resolve a single chunk of files. Delegates the streaming turn to
+   * {@link runConflictResolutionTurn} so we can report the model's live
+   * reasoning to the UI sentence-by-sentence and cancel an in-flight turn.
+   * Retries once on parse or validation failure. Transport errors (timeouts,
+   * auth, session creation) fail fast, and user-initiated aborts are never
+   * retried.
    */
   private async resolveChunk(
     client: CopilotClient,
     prompt: string,
     expectedFiles: ReadonlyArray<IFileConflictContext>,
-    onReasoningSnippet?: (snippet: string) => void
+    onReasoningSnippet?: (snippet: string) => void,
+    signal?: AbortSignal
   ): Promise<ReadonlyArray<IFileResolution>> {
     const expectedPaths = new Set(expectedFiles.map(f => f.path))
     let lastError: Error | undefined
 
     for (let attempt = 0; attempt < 2; attempt++) {
-      let session: Awaited<ReturnType<CopilotClient['createSession']>> | null =
-        null
+      // Don't start (or retry) a turn that's already been cancelled.
+      if (signal?.aborted) {
+        throw new CopilotConflictResolutionAbortError()
+      }
+
+      const sessionTimer = startTimer(`createSession (attempt ${attempt + 1})`)
+      const session = await client.createSession({
+        model: 'gpt-5-mini',
+        reasoningEffort: 'medium',
+        streaming: true,
+        availableTools: [],
+        systemMessage: {
+          mode: 'append',
+          content: ConflictResolutionSystemPrompt,
+        },
+        onPermissionRequest: async () => ({
+          kind: 'reject',
+        }),
+      })
+      sessionTimer.done()
+
+      // The user may have cancelled while the session was being created. Tear
+      // it down immediately rather than starting a turn we're about to abandon.
+      if (signal?.aborted) {
+        await session.destroy().catch(() => {})
+        throw new CopilotConflictResolutionAbortError()
+      }
 
       try {
-        const sessionTimer = startTimer(
-          `createSession (attempt ${attempt + 1})`
-        )
-        session = await client.createSession({
-          model: 'gpt-5-mini',
-          reasoningEffort: 'medium',
-          streaming: true,
-          availableTools: [],
-          systemMessage: {
-            mode: 'append',
-            content: ConflictResolutionSystemPrompt,
-          },
-          onPermissionRequest: async () => ({
-            kind: 'reject',
-          }),
-        })
-        sessionTimer.done()
-
-        // Use send() + event listeners so we can stream the model's
-        // reasoning to the UI as it arrives.
         const streamTimer = startTimer(
           `streaming response (attempt ${attempt + 1})`
         )
-        const ttftStart = performance.now()
 
-        const responseContent = await new Promise<string>((resolve, reject) => {
-          let firstDeltaLogged = false
-          let resolved = false
-          let reasoningBuffer = ''
-          const timeout = 600_000
-
-          // Match a sentence terminator (`.`, `!`, `?`, or newline) — when
-          // we see one, flush the accumulated reasoning text as a single
-          // user-facing snippet so the UI can show one sentence at a time.
-          // Negative lookbehind for digits avoids splitting list markers
-          // like `1. ` mid-sentence.
-          const sentenceTerminator = /(?<!\d)([.!?])\s+|\n+/
-
-          const flushReasoning = (force: boolean) => {
-            while (true) {
-              const match = sentenceTerminator.exec(reasoningBuffer)
-              if (match === null) {
-                break
-              }
-              const end = match.index + match[0].length
-              const sentence = reasoningBuffer.slice(0, end).trim()
-              reasoningBuffer = reasoningBuffer.slice(end)
-              if (sentence.length > 0) {
-                if (__DEV__) {
-                  log.info(`[Copilot SDK] reasoning sentence: ${sentence}`)
-                }
-                onReasoningSnippet?.(sentence)
-              }
-            }
-            if (force && reasoningBuffer.trim().length > 0) {
-              if (__DEV__) {
-                log.info(
-                  `[Copilot SDK] reasoning sentence (forced): ${reasoningBuffer.trim()}`
-                )
-              }
-              onReasoningSnippet?.(reasoningBuffer.trim())
-              reasoningBuffer = ''
-            }
+        // runConflictResolutionTurn owns the session lifecycle for this turn —
+        // it destroys the session exactly once on success, error, or abort.
+        const responseContent = await runConflictResolutionTurn(
+          session,
+          prompt,
+          {
+            timeoutMs: 600_000,
+            signal,
+            onReasoningSnippet,
           }
-
-          const timer = setTimeout(() => {
-            if (!resolved) {
-              resolved = true
-              cleanup()
-              reject(new Error('Copilot conflict resolution timed out'))
-            }
-          }, timeout)
-
-          const cleanup = () => {
-            clearTimeout(timer)
-            unsubReasoning()
-            unsubDelta()
-            unsubMessage()
-            unsubIdle()
-            unsubError()
-          }
-
-          // Stream the model's extended-thinking text sentence-by-sentence
-          // so the UI can show what Copilot is currently reasoning about.
-          const unsubReasoning = session!.on(
-            'assistant.reasoning_delta',
-            event => {
-              if (__DEV__) {
-                log.info(
-                  `[Copilot SDK] reasoning_delta: ${JSON.stringify(
-                    event.data.deltaContent
-                  )}`
-                )
-              }
-              reasoningBuffer += event.data.deltaContent
-              flushReasoning(false)
-            }
-          )
-
-          // First message_delta marks the transition into the actual
-          // response (the JSON payload). Flush any leftover reasoning
-          // so it doesn't get stranded in the buffer.
-          const unsubDelta = session!.on('assistant.message_delta', () => {
-            if (!firstDeltaLogged) {
-              firstDeltaLogged = true
-              const ttft = (performance.now() - ttftStart) / 1000
-              log.info(
-                `[Timing] time-to-first-token (attempt ${
-                  attempt + 1
-                }) ${ttft.toFixed(3)}s`
-              )
-              flushReasoning(true)
-            }
-          })
-
-          // The assistant.message event contains the complete, final
-          // response content. This is the authoritative source — NOT
-          // the accumulated deltas (which may be incomplete or absent).
-          const unsubMessage = session!.on('assistant.message', event => {
-            if (resolved) {
-              return
-            }
-            resolved = true
-            cleanup()
-
-            const content = event.data.content
-            if (!content) {
-              reject(new Error('No response from Copilot'))
-            } else {
-              resolve(content)
-            }
-          })
-
-          // Session becomes idle — fallback completion signal in case
-          // assistant.message wasn't received (shouldn't happen but
-          // guards against edge cases).
-          const unsubIdle = session!.on('session.idle', () => {
-            if (resolved) {
-              return
-            }
-            // Give assistant.message a brief window to fire first
-            setTimeout(() => {
-              if (!resolved) {
-                resolved = true
-                cleanup()
-                reject(new Error('Session went idle without a response'))
-              }
-            }, 100)
-          })
-
-          // Handle errors
-          const unsubError = session!.on('session.error', event => {
-            if (resolved) {
-              return
-            }
-            resolved = true
-            cleanup()
-            reject(new Error(`Copilot error: ${event.data.message}`))
-          })
-
-          // Send the prompt (fire-and-forget; events drive completion)
-          session!.send({ prompt }).catch(err => {
-            if (!resolved) {
-              resolved = true
-              cleanup()
-              reject(err)
-            }
-          })
-        })
+        )
 
         streamTimer.done()
 
@@ -953,6 +1029,11 @@ export class CopilotStore extends BaseStore {
         return parsed.resolutions
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e))
+
+        // Never retry a user-initiated abort.
+        if (isCopilotConflictResolutionAbortError(lastError)) {
+          throw lastError
+        }
 
         // Only retry on parse/validation failures — fail fast on
         // transport errors (timeouts, auth, session creation).
@@ -966,8 +1047,6 @@ export class CopilotStore extends BaseStore {
           'CopilotStore: Conflict resolution parse/validation failed, retrying',
           e
         )
-      } finally {
-        await session?.destroy().catch(() => {})
       }
     }
 

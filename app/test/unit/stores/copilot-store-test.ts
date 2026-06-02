@@ -1,10 +1,13 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import type { ModelInfo } from '@github/copilot-sdk'
+import type { CopilotSession, ModelInfo } from '@github/copilot-sdk'
 import {
+  CopilotConflictResolutionAbortError,
   DefaultCopilotModel,
   getLowestReasoningEffort,
   getPreferredDefaultModel,
+  isCopilotConflictResolutionAbortError,
+  runConflictResolutionTurn,
 } from '../../../src/lib/stores/copilot-store'
 
 function makeModel(
@@ -149,5 +152,142 @@ describe('getPreferredDefaultModel', () => {
     })
     const result = getPreferredDefaultModel([cheapModel, defaultModel])
     assert.strictEqual(result, defaultModel)
+  })
+})
+
+/**
+ * A minimal fake of the bits of `CopilotSession` that
+ * `runConflictResolutionTurn` interacts with: event subscription (returning an
+ * unsubscribe fn), `send`, and `destroy`. Lets us drive the streaming turn
+ * deterministically and assert teardown behaviour.
+ */
+function createFakeSession() {
+  const handlers: Record<string, Array<(event: unknown) => void>> = {}
+  let unsubCalls = 0
+  let destroyCalls = 0
+  let sendCalls = 0
+
+  const session = {
+    on(event: string, handler: (event: unknown) => void) {
+      handlers[event] = handlers[event] ?? []
+      handlers[event].push(handler)
+      let unsubscribed = false
+      return () => {
+        if (!unsubscribed) {
+          unsubscribed = true
+          unsubCalls++
+        }
+      }
+    },
+    send() {
+      sendCalls++
+      // Never settles on its own — the turn completes via emitted events.
+      return new Promise<void>(() => {})
+    },
+    destroy() {
+      destroyCalls++
+      return Promise.resolve()
+    },
+  }
+
+  const emit = (event: string, data: unknown) => {
+    for (const handler of handlers[event] ?? []) {
+      handler({ data })
+    }
+  }
+
+  return {
+    session: session as unknown as CopilotSession,
+    emit,
+    get unsubCalls() {
+      return unsubCalls
+    },
+    get destroyCalls() {
+      return destroyCalls
+    },
+    get sendCalls() {
+      return sendCalls
+    },
+  }
+}
+
+describe('runConflictResolutionTurn', () => {
+  it('rejects as aborted and tears down the session when cancelled mid-turn', async () => {
+    const fake = createFakeSession()
+    const controller = new AbortController()
+
+    const promise = runConflictResolutionTurn(fake.session, 'prompt', {
+      timeoutMs: 60_000,
+      signal: controller.signal,
+    })
+
+    controller.abort()
+
+    await assert.rejects(promise, (err: unknown) =>
+      isCopilotConflictResolutionAbortError(err)
+    )
+    // The in-flight turn is torn down: session destroyed once, all four event
+    // listeners unsubscribed exactly once.
+    assert.strictEqual(fake.destroyCalls, 1)
+    assert.strictEqual(fake.unsubCalls, 4)
+  })
+
+  it('rejects and destroys the session for an already-aborted signal', async () => {
+    const fake = createFakeSession()
+    const controller = new AbortController()
+    controller.abort()
+
+    await assert.rejects(
+      runConflictResolutionTurn(fake.session, 'prompt', {
+        timeoutMs: 60_000,
+        signal: controller.signal,
+      }),
+      (err: unknown) => err instanceof CopilotConflictResolutionAbortError
+    )
+
+    // The session is still destroyed even though we bailed before sending.
+    assert.strictEqual(fake.destroyCalls, 1)
+    assert.strictEqual(fake.sendCalls, 0)
+  })
+
+  it('resolves with the final message content and destroys the session once', async () => {
+    const fake = createFakeSession()
+    const controller = new AbortController()
+
+    const promise = runConflictResolutionTurn(fake.session, 'prompt', {
+      timeoutMs: 60_000,
+      signal: controller.signal,
+    })
+
+    fake.emit('assistant.message', { content: 'RESOLVED' })
+
+    assert.strictEqual(await promise, 'RESOLVED')
+    assert.strictEqual(fake.destroyCalls, 1)
+
+    // A late abort after completion must not re-tear-down or double-destroy.
+    controller.abort()
+    assert.strictEqual(fake.destroyCalls, 1)
+  })
+
+  it('streams reasoning snippets sentence-by-sentence', async () => {
+    const fake = createFakeSession()
+    const snippets: Array<string> = []
+
+    const promise = runConflictResolutionTurn(fake.session, 'prompt', {
+      timeoutMs: 60_000,
+      onReasoningSnippet: snippet => snippets.push(snippet),
+    })
+
+    fake.emit('assistant.reasoning_delta', {
+      deltaContent: 'Looking at both sides. Now comparing changes. ',
+    })
+    fake.emit('assistant.message', { content: 'RESOLVED' })
+
+    await promise
+
+    assert.deepStrictEqual(snippets, [
+      'Looking at both sides.',
+      'Now comparing changes.',
+    ])
   })
 })

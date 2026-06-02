@@ -381,6 +381,10 @@ export class CopilotConflictsLoadingDialog extends React.Component<
   private onCancel = () => {
     const { dispatcher, repository, conflictState } = this.props
 
+    // Actually tear down the in-flight Copilot turn so it stops consuming work
+    // in the background, then return the user to the manual conflicts list.
+    dispatcher.abortCopilotConflictResolution(repository)
+
     dispatcher.setMultiCommitOperationStepWithCopilotResolution(
       repository,
       {

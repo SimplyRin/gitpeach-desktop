@@ -6032,7 +6032,8 @@ export class AppStore extends TypedBaseStore<IAppState> {
   /** This shouldn't be called directly. See 'Dispatcher'. */
   public async _resolveConflictsWithCopilot(
     repository: Repository,
-    onProgress?: (progress: IConflictResolutionProgress) => void
+    onProgress?: (progress: IConflictResolutionProgress) => void,
+    signal?: AbortSignal
   ): Promise<ICopilotConflictResolutionResponse | null> {
     if (!enableCopilotConflictResolution()) {
       return null
@@ -6108,12 +6109,18 @@ export class AppStore extends TypedBaseStore<IAppState> {
           commitContext,
           currentPullRequest,
           repository.path,
-          onProgress
+          onProgress,
+          signal
         )
       } finally {
         resolveTimer.done()
       }
     } catch (e) {
+      // A user-initiated cancellation isn't a failure — don't log it as one.
+      if (signal?.aborted) {
+        log.info('AppStore: Copilot conflict resolution aborted by user')
+        return null
+      }
       log.warn('AppStore: Copilot conflict resolution failed', e)
       return null
     } finally {
@@ -6216,17 +6223,35 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
     const { conflictState } = step
 
+    // Controller used to actually cancel the in-flight SDK turn when the user
+    // clicks "Stop" (see _abortCopilotConflictResolution).
+    const abortController = new AbortController()
+    this.repositoryStateCache.updateMultiCommitOperationState(
+      repository,
+      () => ({ copilotResolutionAbortController: abortController })
+    )
+
+    // Only the run that owns this controller may mutate Copilot resolution
+    // state. Guards against a stale run (still unwinding after the user
+    // cancelled and restarted) clobbering the controller, progress, or result
+    // of the newer run.
+    const ownsCurrentRun = () =>
+      this.repositoryStateCache.get(repository).multiCommitOperationState
+        ?.copilotResolutionAbortController === abortController
+
     try {
       const result = await this._resolveConflictsWithCopilot(
         repository,
         progress => {
-          // Bail if user cancelled while the request was in-flight
+          // Bail if user cancelled while the request was in-flight, or if a
+          // newer run has taken over.
           const current = this.repositoryStateCache.get(repository)
           const mcoState = current.multiCommitOperationState
           if (
             mcoState === null ||
             mcoState.step.kind !==
-              MultiCommitOperationStepKind.ShowCopilotConflictsLoading
+              MultiCommitOperationStepKind.ShowCopilotConflictsLoading ||
+            !ownsCurrentRun()
           ) {
             return
           }
@@ -6240,8 +6265,31 @@ export class AppStore extends TypedBaseStore<IAppState> {
             () => ({ copilotResolutionProgress: progress })
           )
           this.emitUpdate()
-        }
+        },
+        abortController.signal
       )
+
+      // The user stopped the resolution. The loading dialog has already
+      // navigated back to the conflicts list, so just clear the in-flight
+      // state without surfacing an error.
+      if (abortController.signal.aborted) {
+        if (ownsCurrentRun()) {
+          this.repositoryStateCache.updateMultiCommitOperationState(
+            repository,
+            () => ({
+              copilotResolutionProgress: null,
+              copilotResolutionAbortController: null,
+            })
+          )
+          this.emitUpdate()
+        }
+        return
+      }
+
+      // A newer run took over while we were awaiting — let it own the outcome.
+      if (!ownsCurrentRun()) {
+        return
+      }
 
       // Re-check state: user may have cancelled during the await
       const currentState = this.repositoryStateCache.get(repository)
@@ -6287,6 +6335,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
             },
             copilotResolutions: result.resolutions,
             copilotResolutionProgress: null,
+            copilotResolutionAbortController: null,
           })
         )
 
@@ -6306,12 +6355,18 @@ export class AppStore extends TypedBaseStore<IAppState> {
           },
           copilotResolutions: result.resolutions,
           copilotResolutionProgress: null,
+          copilotResolutionAbortController: null,
         })
       )
 
       this.emitUpdate()
     } catch (e) {
       log.warn('AppStore: Copilot conflict resolution flow failed', e)
+
+      // A stale run shouldn't surface errors or reset a newer run's state.
+      if (!ownsCurrentRun()) {
+        return
+      }
 
       // Surface the error to the user so they understand why they were
       // routed back to manual conflict resolution. Mirrors the pattern
@@ -6329,10 +6384,29 @@ export class AppStore extends TypedBaseStore<IAppState> {
           useCopilotConflictResolution: false,
           copilotResolutions: null,
           copilotResolutionProgress: null,
+          copilotResolutionAbortController: null,
         })
       )
 
       this.emitUpdate()
+    }
+  }
+
+  /**
+   * Cancel the in-flight Copilot conflict resolution for the given repository,
+   * if one is running. Fires the stored AbortController so the underlying SDK
+   * turn is torn down immediately rather than running to completion in the
+   * background.
+   *
+   * This shouldn't be called directly. See `Dispatcher`.
+   */
+  public _abortCopilotConflictResolution(repository: Repository): void {
+    const state = this.repositoryStateCache.get(repository)
+    const controller =
+      state.multiCommitOperationState?.copilotResolutionAbortController ?? null
+
+    if (controller !== null) {
+      controller.abort()
     }
   }
 
@@ -8832,6 +8906,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
       useCopilotConflictResolution: false,
       copilotResolutions: null,
       copilotResolutionProgress: null,
+      copilotResolutionAbortController: null,
       originalBranchTip,
       targetBranch,
     })
