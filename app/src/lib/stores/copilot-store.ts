@@ -41,6 +41,7 @@ import { pathExists } from '../path-exists'
 import { enableCopilotSdkCommitMessageGeneration } from '../feature-flag'
 import {
   type CopilotModelInfo,
+  type ICopilotUsageBillingTokenPrice,
   getCopilotModelBillingMultiplier,
   normalizeCopilotModelInfo,
 } from '../copilot/model-info'
@@ -353,6 +354,56 @@ export function getPreferredDefaultModel(
       (getCopilotModelBillingMultiplier(a.billing) ?? Infinity) -
       (getCopilotModelBillingMultiplier(b.billing) ?? Infinity)
   )[0]
+}
+
+const TemporaryMockUsageBillingBatchSize = 1_000_000
+
+const getTemporaryMockUsageBillingNumber = (
+  minimum: number,
+  maximum: number
+) => {
+  const range = maximum - minimum + 1
+  return minimum + (randomBytes(4).readUInt32BE(0) % range)
+}
+
+const getTemporaryMockUsageBillingTokenPrice = (
+  contextMinimum: number,
+  contextMaximum: number
+): ICopilotUsageBillingTokenPrice => ({
+  cache_price: getTemporaryMockUsageBillingNumber(1, 100),
+  context_max: getTemporaryMockUsageBillingNumber(
+    contextMinimum,
+    contextMaximum
+  ),
+  input_price: getTemporaryMockUsageBillingNumber(100, 1_000),
+  output_price: getTemporaryMockUsageBillingNumber(1_000, 5_000),
+})
+
+/**
+ * Adds temporary mocked usage billing data for model picker UX testing.
+ *
+ * The Copilot SDK does not yet return usage billing metadata. Until it does,
+ * overwrite fetched model billing with a `usage` billing object that has a
+ * fixed batch size and random placeholder values everywhere else. Remove this
+ * when the SDK returns real usage billing data.
+ */
+export function getCopilotModelWithTemporaryMockUsageBilling(
+  model: CopilotModelInfo
+): CopilotModelInfo {
+  return {
+    ...model,
+    billing: {
+      kind: 'usage',
+      token_prices: {
+        batch_size: TemporaryMockUsageBillingBatchSize,
+        default: getTemporaryMockUsageBillingTokenPrice(100_000, 300_000),
+        long_context: getTemporaryMockUsageBillingTokenPrice(
+          300_001,
+          1_000_000
+        ),
+      },
+    },
+  }
 }
 
 /**
@@ -1064,7 +1115,9 @@ export class CopilotStore extends BaseStore {
 
     try {
       await client.start()
-      const models = (await client.listModels()).map(normalizeCopilotModelInfo)
+      const models = (await client.listModels())
+        .map(normalizeCopilotModelInfo)
+        .map(getCopilotModelWithTemporaryMockUsageBilling)
       this.cachedModels = models
       this.modelsCachedAt = Date.now()
       return models

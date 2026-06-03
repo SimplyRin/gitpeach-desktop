@@ -2,6 +2,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert'
 import {
   DefaultCopilotModel,
+  getCopilotModelWithTemporaryMockUsageBilling,
   getLowestReasoningEffort,
   getPreferredDefaultModel,
 } from '../../../src/lib/stores/copilot-store'
@@ -182,6 +183,29 @@ describe('getPreferredDefaultModel', () => {
       premiumRequestsBilled,
     ])
     assert.strictEqual(result, premiumRequestsBilled)
+  })
+})
+
+describe('getCopilotModelWithTemporaryMockUsageBilling', () => {
+  it('adds temporary mocked usage billing', () => {
+    const model = getCopilotModelWithTemporaryMockUsageBilling(
+      makeModel({ id: 'mocked', name: 'Mocked' })
+    )
+
+    const billing = model.billing
+    assert.ok(billing !== undefined)
+    assert.strictEqual(billing.kind, 'usage')
+
+    const tokenPrices = billing.token_prices
+    assert.strictEqual(tokenPrices.batch_size, 1000000)
+    assert.ok(tokenPrices.long_context !== undefined)
+
+    for (const tokenPrice of [tokenPrices.default, tokenPrices.long_context]) {
+      assert.ok(tokenPrice.cache_price > 0)
+      assert.ok(tokenPrice.context_max > 0)
+      assert.ok(tokenPrice.input_price > 0)
+      assert.ok(tokenPrice.output_price > 0)
+    }
   })
 })
 

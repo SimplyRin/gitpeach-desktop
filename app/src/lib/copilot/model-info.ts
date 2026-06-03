@@ -28,6 +28,14 @@ export type CopilotModelBilling =
   | ICopilotPremiumRequestsBilling
   | ICopilotUsageBilling
 
+/**
+ * Temporary app-side Copilot model info shape.
+ *
+ * This accepts both the current SDK premium request billing shape and the REST
+ * API usage billing shape. While usage billing is not yet available through
+ * the SDK, CopilotStore injects temporary mocked data for testing purposes;
+ * those mocked usage values must not be treated as real prices.
+ */
 export type CopilotModelInfo = Omit<ModelInfo, 'billing'> & {
   readonly billing?: CopilotModelBilling
 }
