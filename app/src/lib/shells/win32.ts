@@ -302,13 +302,13 @@ async function findCygwin(): Promise<string | null> {
   return null
 }
 
-async function findWarp(): Promise<string | null> {
+async function findOldWarp(): Promise<string | null> {
   const warpPresent = enumerateValues(
     HKEY.HKEY_CURRENT_USER,
-    'Software\\Warp.dev\\Warp\\FontSize' // Get any warp data to check for installation
+    'Software\\Warp.dev\\Warp'
   )
 
-  if (!warpPresent) {
+  if (!warpPresent || warpPresent.length === 0) {
     return null
   }
 
@@ -346,6 +346,38 @@ async function findWarp(): Promise<string | null> {
   }
 
   return null
+}
+
+async function findWarp(): Promise<string | null> {
+  const warpRegistry = enumerateValues(
+    HKEY.HKEY_CURRENT_USER,
+    'Software\\Warp.dev\\Warp' // Get warp installation path
+  )
+
+  if (!warpRegistry || warpRegistry.length === 0) {
+    return null
+  }
+
+  const warpInstallationPath = warpRegistry.find(
+    e => e.name === 'InstallationPath'
+  )
+  if (
+    !warpInstallationPath ||
+    warpInstallationPath.type !== RegistryValueType.REG_SZ
+  ) {
+    return await findOldWarp()
+  }
+
+  // If any of the paths exist, return it
+  if (await pathExists(warpInstallationPath.data)) {
+    return warpInstallationPath.data
+  } else {
+    log.debug(
+      `[Warp] no new installation path found, checking old warp installation checker process`
+    )
+  }
+
+  return await findOldWarp()
 }
 
 async function findWSL(): Promise<string | null> {
