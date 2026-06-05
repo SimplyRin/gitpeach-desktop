@@ -64,6 +64,8 @@ interface ICopilotConflictsDialogState {
   readonly isContinuing: boolean
 }
 
+const CopilotConflictsDialogTitleId = 'Dialog_Copilot_Conflicts'
+
 /**
  * Dialog shown after Copilot has resolved conflicts.
  *
@@ -153,9 +155,8 @@ export class CopilotConflictsDialog extends React.Component<
   }
 
   private onResolutionDropdownClick = (path: string) => {
-    const { conflictState } = this.props
     const currentChoice = this.getResolutionForFile(path)
-    const { ourBranch, theirBranch } = conflictState
+    const { ourBranch, theirBranch } = this.props.conflictState
 
     const oursLabel = ourBranch
       ? `Use current file from ${ourBranch}`
@@ -406,6 +407,7 @@ export class CopilotConflictsDialog extends React.Component<
     return (
       <Dialog
         id="copilot-conflicts-dialog"
+        titleId={CopilotConflictsDialogTitleId}
         dismissDisabled={isContinuing}
         onDismissed={this.props.onDismissed}
         onSubmit={this.onContinue}
@@ -414,7 +416,8 @@ export class CopilotConflictsDialog extends React.Component<
       >
         <DialogHeader
           title={`Resolve conflicts before ${operationKind}`}
-          showCloseButton={true}
+          titleId={CopilotConflictsDialogTitleId}
+          showCloseButton={!isContinuing}
           onCloseButtonClick={this.props.onDismissed}
           loading={isContinuing}
         >
