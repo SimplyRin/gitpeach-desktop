@@ -6,11 +6,7 @@ import { type IBYOKProvider, encodeModelKey } from '../../lib/copilot/byok'
 import { IFilterListGroup, IFilterListItem } from './filter-list'
 import { PopoverDropdown } from './popover-dropdown'
 import { SectionFilterList } from './section-filter-list'
-import {
-  Model,
-  ModelBilling,
-  ModelBillingTokenPricesLongContext,
-} from '@github/copilot-sdk/dist/generated/rpc'
+import { Model, ModelBilling } from '@github/copilot-sdk/dist/generated/rpc'
 
 interface ICopilotModelPickerProps {
   readonly label: string
@@ -31,42 +27,93 @@ interface ICopilotModelListItem extends IFilterListItem {
   readonly value: string
   readonly name: string
   readonly billing: ModelBilling | undefined
+  readonly modelPickerCategory: string | undefined
+  readonly modelPickerPriceCategory: string | undefined
   readonly isDefault: boolean
 }
 
 const ModelPickerCompactRowHeight = 36
-const ModelPickerUsageBillingRowHeight = 104
+const ModelPickerSubtitleRowHeight = 54
 
 const getPremiumRequestsBillingLabel = (billing: ModelBilling | undefined) => {
   const multiplier = billing?.multiplier
   return multiplier === undefined ? '' : ` (${multiplier}x)`
 }
 
-const getCopilotModelLabel = (item: ICopilotModelListItem) => {
+const formatModelPickerCategory = (category: string) =>
+  category.replace(/_/g, ' ')
+
+const formatModelPickerCategoryHeader = (category: string) => {
+  const formattedCategory = formatModelPickerCategory(category)
+  return `${formattedCategory.charAt(0).toUpperCase()}${formattedCategory.slice(
+    1
+  )}`
+}
+
+const getModelPickerPriceCategory = (item: ICopilotModelListItem) => {
+  const { billing, modelPickerPriceCategory } = item
+
+  if (
+    billing?.tokenPrices === undefined ||
+    modelPickerPriceCategory === undefined ||
+    modelPickerPriceCategory.trim().length === 0
+  ) {
+    return null
+  }
+
+  return formatModelPickerCategory(modelPickerPriceCategory)
+}
+
+const getListItemSubtitle = (item: ICopilotModelListItem) => {
+  const modelPickerPriceCategory = getModelPickerPriceCategory(item)
+  return modelPickerPriceCategory === null
+    ? null
+    : `Use of credits: ${modelPickerPriceCategory}`
+}
+
+export const getCopilotModelPickerSelectionInfo = (
+  copilotModels: ReadonlyArray<Model>,
+  value: string
+) => {
+  const selectedModel = copilotModels.find(
+    model => encodeModelKey({ kind: 'copilot', modelId: model.id }) === value
+  )
+  const billing = selectedModel?.billing as ModelBilling | undefined
+  const modelPickerPriceCategory =
+    selectedModel?.modelPickerPriceCategory?.trim()
+
+  if (
+    billing?.tokenPrices === undefined ||
+    modelPickerPriceCategory === undefined ||
+    modelPickerPriceCategory.length === 0
+  ) {
+    return null
+  }
+
+  const modelPickerCategory = selectedModel?.modelPickerCategory?.trim()
+  const useOfCredits = `Use of credits: ${formatModelPickerCategory(
+    modelPickerPriceCategory
+  )}`
+
+  return modelPickerCategory === undefined || modelPickerCategory.length === 0
+    ? useOfCredits
+    : `${formatModelPickerCategoryHeader(
+        modelPickerCategory
+      )} model. ${useOfCredits}`
+}
+
+const getCopilotModelTitle = (item: ICopilotModelListItem) => {
   const billingLabel = getPremiumRequestsBillingLabel(item.billing)
   return item.isDefault
     ? `${item.name}${billingLabel} (default)`
     : `${item.name}${billingLabel}`
 }
 
-const formatCompactNumber = (value: number) => {
-  if (Number.isInteger(value)) {
-    return value.toString()
-  }
+const getCopilotModelAriaLabel = (item: ICopilotModelListItem) => {
+  const title = getCopilotModelTitle(item)
+  const subtitle = getListItemSubtitle(item)
 
-  return value.toFixed(1).replace(/\.0$/, '')
-}
-
-const formatTokenBatchSize = (tokenCount: number) => {
-  if (tokenCount >= 1_000_000) {
-    return `${formatCompactNumber(tokenCount / 1_000_000)}M`
-  }
-
-  if (tokenCount >= 1_000) {
-    return `${formatCompactNumber(tokenCount / 1_000)}K`
-  }
-
-  return tokenCount.toString()
+  return subtitle === null ? title : `${title}, ${subtitle}`
 }
 
 const getCopilotModelGroups = (
@@ -77,25 +124,59 @@ const getCopilotModelGroups = (
 
   if (copilotModels.length > 0) {
     const providerName = 'GitHub Copilot'
+    const uncategorizedItems = new Array<ICopilotModelListItem>()
+    const categorizedItems = new Map<string, Array<ICopilotModelListItem>>()
 
-    groups.push({
-      identifier: providerName,
-      items: copilotModels.map(model => {
-        const value = encodeModelKey({
-          kind: 'copilot',
-          modelId: model.id,
-        })
+    for (const model of copilotModels) {
+      const value = encodeModelKey({
+        kind: 'copilot',
+        modelId: model.id,
+      })
+      const modelPickerCategory = model.modelPickerCategory?.trim()
+      const modelPickerPriceCategory = model.modelPickerPriceCategory?.trim()
+      const item = {
+        id: value,
+        text: [
+          model.name,
+          model.id,
+          providerName,
+          modelPickerCategory ?? '',
+          modelPickerPriceCategory ?? '',
+        ],
+        value,
+        name: model.name,
+        billing: model.billing as ModelBilling | undefined,
+        modelPickerCategory,
+        modelPickerPriceCategory,
+        isDefault: model.id === DefaultCopilotModel,
+      }
 
-        return {
-          id: value,
-          text: [model.name, model.id, providerName],
-          value,
-          name: model.name,
-          billing: model.billing as ModelBilling | undefined,
-          isDefault: model.id === DefaultCopilotModel,
-        }
-      }),
-    })
+      if (
+        modelPickerCategory === undefined ||
+        modelPickerCategory.length === 0
+      ) {
+        uncategorizedItems.push(item)
+      } else {
+        const items = categorizedItems.get(modelPickerCategory) ?? []
+        items.push(item)
+        categorizedItems.set(modelPickerCategory, items)
+      }
+    }
+
+    if (uncategorizedItems.length > 0) {
+      groups.push({
+        identifier: '',
+        showHeader: false,
+        items: uncategorizedItems,
+      })
+    }
+
+    for (const [category, items] of categorizedItems) {
+      groups.push({
+        identifier: formatModelPickerCategoryHeader(category),
+        items,
+      })
+    }
   }
 
   for (const provider of byokProviders) {
@@ -118,6 +199,8 @@ const getCopilotModelGroups = (
           value,
           name: model.name,
           billing: undefined,
+          modelPickerCategory: undefined,
+          modelPickerPriceCategory: undefined,
           isDefault: false,
         }
       }),
@@ -200,56 +283,31 @@ export class CopilotModelPicker extends React.Component<
   }: {
     readonly item: ICopilotModelListItem | null
   }) =>
-    item?.billing?.tokenPrices === undefined
-      ? ModelPickerCompactRowHeight
-      : ModelPickerUsageBillingRowHeight
-
-  private renderUsageBillingRow = (label: string, value: number) => {
-    return (
-      <div className="copilot-model-billing-row">
-        <span className="copilot-model-billing-label">{label}</span>
-        <span className="copilot-model-billing-value">{value}</span>
-      </div>
-    )
-  }
-
-  private renderUsageBilling = (
-    billing: ModelBilling | undefined,
-    className?: string
-  ) => {
-    if (billing?.tokenPrices === undefined) {
-      return null
-    }
-
-    const tokenPrices: ModelBillingTokenPricesLongContext = billing.tokenPrices
-    const billingClassName =
-      className === undefined
-        ? 'copilot-model-billing'
-        : `copilot-model-billing ${className}`
-
-    return (
-      <div className={billingClassName}>
-        <div className="copilot-model-billing-heading">
-          AI credits per{' '}
-          {formatTokenBatchSize(billing.tokenPrices.batchSize ?? 0)} tokens
-        </div>
-        {this.renderUsageBillingRow('Input', tokenPrices.inputPrice ?? 0)}
-        {this.renderUsageBillingRow(
-          'Cached input',
-          tokenPrices.cachePrice ?? 0
-        )}
-        {this.renderUsageBillingRow('Output', tokenPrices.outputPrice ?? 0)}
-      </div>
-    )
-  }
+    item !== null && getListItemSubtitle(item) !== null
+      ? ModelPickerSubtitleRowHeight
+      : ModelPickerCompactRowHeight
 
   private renderModel = (item: ICopilotModelListItem) => {
+    const subtitle = getListItemSubtitle(item)
+
     return (
       <div className="copilot-model-list-item">
         <div className="info">
-          <div className="title">{getCopilotModelLabel(item)}</div>
-          {this.renderUsageBilling(item.billing)}
+          <div className="title">{getCopilotModelTitle(item)}</div>
+          {subtitle === null ? null : (
+            <div className="subtitle">{subtitle}</div>
+          )}
         </div>
+      </div>
+    )
+  }
+
+  private renderButtonContent = (item: ICopilotModelListItem | undefined) => {
+    return (
+      <div className="copilot-model-picker-button-content">
+        <span className="name">
+          {item === undefined ? '' : getCopilotModelTitle(item)}
+        </span>
       </div>
     )
   }
@@ -267,20 +325,7 @@ export class CopilotModelPicker extends React.Component<
   }
 
   private getItemAriaLabel = (item: ICopilotModelListItem) => {
-    const label = getCopilotModelLabel(item)
-    const billing = item.billing
-
-    if (billing?.tokenPrices === undefined) {
-      return label
-    }
-
-    const tokenPrices: ModelBillingTokenPricesLongContext = billing.tokenPrices
-
-    return `${label}, AI credits per ${formatTokenBatchSize(
-      billing.tokenPrices.batchSize ?? 0
-    )} tokens, Input ${tokenPrices.inputPrice ?? 0}, Cached input ${
-      tokenPrices.cachePrice ?? 0
-    }, Output ${tokenPrices.outputPrice ?? 0}`
+    return getCopilotModelAriaLabel(item)
   }
 
   private getGroupAriaLabel = (group: number) => {
@@ -290,7 +335,9 @@ export class CopilotModelPicker extends React.Component<
     )
     const modelGroup = groups[group]
 
-    return modelGroup === undefined ? undefined : modelGroup.identifier
+    return modelGroup === undefined || modelGroup.identifier.length === 0
+      ? undefined
+      : modelGroup.identifier
   }
 
   public render() {
@@ -306,43 +353,31 @@ export class CopilotModelPicker extends React.Component<
     const buttonItem = this.getItemByValue(groups, this.props.value)
 
     return (
-      <div className="copilot-model-picker-container">
-        <PopoverDropdown
-          className="copilot-model-picker"
-          contentTitle="Choose a model"
-          buttonContent={
-            <div className="copilot-model-picker-button-content">
-              <span className="name">
-                {buttonItem ? getCopilotModelLabel(buttonItem) : ''}
-              </span>
-            </div>
-          }
-          label={this.props.label}
-          ref={this.popoverRef}
-        >
-          <SectionFilterList<ICopilotModelListItem>
-            className="copilot-model-list"
-            rowHeight={this.getRowHeight}
-            groups={groups}
-            selectedItem={selectedItem}
-            renderItem={this.renderModel}
-            renderGroupHeader={this.renderGroupHeader}
-            filterText={this.state.filterText}
-            onFilterTextChanged={this.onFilterTextChanged}
-            invalidationProps={groups}
-            onItemClick={this.onItemClick}
-            onSelectionChanged={this.onSelectionChanged}
-            getItemAriaLabel={this.getItemAriaLabel}
-            getGroupAriaLabel={this.getGroupAriaLabel}
-            placeholderText="Filter models"
-            renderNoItems={this.renderNoItems}
-          />
-        </PopoverDropdown>
-        {this.renderUsageBilling(
-          buttonItem?.billing,
-          'copilot-model-picker-selected-billing'
-        )}
-      </div>
+      <PopoverDropdown
+        className="copilot-model-picker"
+        contentTitle="Choose a model"
+        buttonContent={this.renderButtonContent(buttonItem)}
+        label={this.props.label}
+        ref={this.popoverRef}
+      >
+        <SectionFilterList<ICopilotModelListItem>
+          className="copilot-model-list"
+          rowHeight={this.getRowHeight}
+          groups={groups}
+          selectedItem={selectedItem}
+          renderItem={this.renderModel}
+          renderGroupHeader={this.renderGroupHeader}
+          filterText={this.state.filterText}
+          onFilterTextChanged={this.onFilterTextChanged}
+          invalidationProps={groups}
+          onItemClick={this.onItemClick}
+          onSelectionChanged={this.onSelectionChanged}
+          getItemAriaLabel={this.getItemAriaLabel}
+          getGroupAriaLabel={this.getGroupAriaLabel}
+          placeholderText="Filter models"
+          renderNoItems={this.renderNoItems}
+        />
+      </PopoverDropdown>
     )
   }
 }

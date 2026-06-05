@@ -98,6 +98,12 @@
       margin: 0;
     }
   }
+
+  .copilot-model-picker-selection-info {
+    margin: var(--spacing-half) 0 0;
+    color: var(--text-secondary-color);
+    font-size: var(--font-size-sm);
+  }
 }
 
 #edit-copilot-byok-provider {

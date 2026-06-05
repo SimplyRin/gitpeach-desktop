@@ -738,7 +738,7 @@ function createStateUpdate<T extends IFilterListItem, GroupIdentifier>(
 
     groupIndices.push(idx)
 
-    if (props.renderGroupHeader) {
+    if (props.renderGroupHeader && group.showHeader !== false) {
       groupRows.push({ kind: 'group', identifier: group.identifier })
     }
 

@@ -1,7 +1,13 @@
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
 import * as React from 'react'
-import { render, screen, fireEvent, waitFor } from '../../helpers/ui/render'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '../../helpers/ui/render'
 import { CopilotPreferences } from '../../../src/ui/preferences/copilot'
 import {
   DefaultCopilotModel,
@@ -40,6 +46,8 @@ const otherModel = makeModel({
 const usageBilledModel = makeModel({
   id: 'usage-billed-model',
   name: 'Usage Billed Model',
+  modelPickerCategory: 'lightweight',
+  modelPickerPriceCategory: 'low',
   billing: {
     tokenPrices: {
       batchSize: 1000000,
@@ -164,15 +172,6 @@ function getListItemHeight(element: HTMLElement): string {
   return row.style.height
 }
 
-function getSelectedModelBilling(container: HTMLElement): HTMLElement {
-  const billing = container.querySelector(
-    '.copilot-model-picker-selected-billing'
-  )
-  assert.ok(billing instanceof HTMLElement)
-
-  return billing
-}
-
 describe('CopilotPreferences', () => {
   it('shows sign-in message when copilot is not available', () => {
     render(
@@ -209,27 +208,23 @@ describe('CopilotPreferences', () => {
     fireEvent.click(getModelPickerButton(view.container))
 
     await waitFor(() => assert.ok(screen.getByText('Claude Sonnet (2x)')))
-    assert.ok(screen.getByText('GitHub Copilot'))
+    assert.strictEqual(screen.queryByText('GitHub Copilot'), null)
+    assert.ok(screen.getByText('Lightweight'))
     assert.ok(screen.getAllByText('GPT-5 mini (1x) (default)').length >= 2)
     assert.ok(screen.getByText('Usage Billed Model'))
-    assert.ok(screen.getByText('AI credits per 1M tokens'))
-    assert.ok(screen.getByText('Input'))
-    assert.ok(screen.getByText('500'))
-    assert.ok(screen.getByText('Cached input'))
-    assert.ok(screen.getByText('50'))
-    assert.ok(screen.getByText('Output'))
-    assert.ok(screen.getByText('2500'))
+    assert.ok(screen.getByText('Use of credits: low'))
     assert.strictEqual(
-      getListItemHeight(screen.getByText('GitHub Copilot')),
-      '36px'
+      screen.queryByText('Usage Billed Model (low cost)'),
+      null
     )
+    assert.strictEqual(screen.queryByText('AI credits per 1M tokens'), null)
     assert.strictEqual(
       getListItemHeight(screen.getByText('Claude Sonnet (2x)')),
       '36px'
     )
     assert.strictEqual(
       getListItemHeight(screen.getByText('Usage Billed Model')),
-      '104px'
+      '54px'
     )
   })
 
@@ -241,7 +236,7 @@ describe('CopilotPreferences', () => {
     fireEvent.click(getModelPickerButton(view.container))
 
     await waitFor(() => assert.ok(screen.getByText('Ollama')))
-    assert.ok(screen.getByText('GitHub Copilot'))
+    assert.strictEqual(screen.queryByText('GitHub Copilot'), null)
   })
 
   it('selects the default Copilot model when no model is selected', () => {
@@ -255,13 +250,9 @@ describe('CopilotPreferences', () => {
     assert.ok(
       !getModelPickerButtonText(view.container).includes('GitHub Copilot')
     )
-    assert.strictEqual(
-      view.container.querySelector('.copilot-model-picker-selected-billing'),
-      null
-    )
   })
 
-  it('shows usage billing under the selected model picker', () => {
+  it('shows usage billing below the selected model picker', () => {
     const view = render(
       <CopilotPreferences
         {...defaults()}
@@ -274,16 +265,12 @@ describe('CopilotPreferences', () => {
       />
     )
 
-    const billing = getSelectedModelBilling(view.container)
-    const billingText = billing.textContent ?? ''
+    const button = getModelPickerButton(view.container)
 
-    assert.ok(billingText.includes('AI credits per 1M tokens'))
-    assert.ok(billingText.includes('Input'))
-    assert.ok(billingText.includes('500'))
-    assert.ok(billingText.includes('Cached input'))
-    assert.ok(billingText.includes('50'))
-    assert.ok(billingText.includes('Output'))
-    assert.ok(billingText.includes('2500'))
+    assert.ok(within(button).getByText('Usage Billed Model'))
+    assert.strictEqual(within(button).queryByText(/Use of credits/), null)
+    assert.ok(screen.getByText('Lightweight model. Use of credits: low'))
+    assert.ok(!button.textContent?.includes('low cost'))
   })
 
   it('treats legacy bare-string selections as Copilot models', () => {

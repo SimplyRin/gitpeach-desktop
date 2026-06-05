@@ -15,6 +15,7 @@ import { DialogContent } from '../dialog'
 import { Button } from '../lib/button'
 import {
   CopilotModelPicker,
+  getCopilotModelPickerSelectionInfo,
   hasCopilotModelPickerItems,
 } from '../lib/copilot-model-picker'
 import { LinkButton } from '../lib/link-button'
@@ -177,15 +178,24 @@ export class CopilotPreferences extends React.Component<
       byokProviders,
       rawSelection
     )
+    const selectionInfo = getCopilotModelPickerSelectionInfo(
+      copilotModels,
+      value
+    )
 
     return (
-      <CopilotModelPicker
-        label={label}
-        copilotModels={copilotModels}
-        byokProviders={byokProviders}
-        value={value}
-        onChange={onChange}
-      />
+      <>
+        <CopilotModelPicker
+          label={label}
+          copilotModels={copilotModels}
+          byokProviders={byokProviders}
+          value={value}
+          onChange={onChange}
+        />
+        {selectionInfo === null ? null : (
+          <p className="copilot-model-picker-selection-info">{selectionInfo}</p>
+        )}
+      </>
     )
   }
 

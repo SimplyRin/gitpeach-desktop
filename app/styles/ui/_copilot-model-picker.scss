@@ -1,9 +1,5 @@
 @import '../mixins';
 
-.copilot-model-picker-container {
-  width: 100%;
-}
-
 .copilot-model-picker {
   width: 100%;
 
@@ -35,45 +31,6 @@
   }
 }
 
-.copilot-model-billing {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  width: 100%;
-  color: var(--text-secondary-color);
-  font-size: var(--font-size-sm);
-  line-height: 1.35;
-}
-
-.copilot-model-billing-heading {
-  @include ellipsis;
-  color: var(--text-color);
-  min-width: 0;
-}
-
-.copilot-model-billing-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: var(--spacing);
-}
-
-.copilot-model-billing-label {
-  @include ellipsis;
-  min-width: 0;
-}
-
-.copilot-model-billing-value {
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-.copilot-model-picker-selected-billing {
-  box-sizing: border-box;
-  margin-top: var(--spacing-half);
-  padding: 0 var(--spacing);
-}
-
 .copilot-model-list {
   height: 100%;
   width: 100%;
@@ -103,12 +60,15 @@
     .title {
       @include ellipsis;
       min-width: 0;
-      font-weight: var(--font-weight-semibold);
       color: var(--text-color);
     }
 
-    .copilot-model-billing {
-      padding: 0 0 0 var(--spacing-double);
+    .subtitle {
+      @include ellipsis;
+      min-width: 0;
+      color: var(--text-secondary-color);
+      font-size: var(--font-size-sm);
+      line-height: 1.3;
     }
   }
 
