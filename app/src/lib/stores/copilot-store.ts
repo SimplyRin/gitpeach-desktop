@@ -1293,7 +1293,7 @@ export class CopilotStore extends BaseStore {
       // This is safe because CopilotClient just force-casts the RPC response
       // (a list of `Model`) to `ModelInfo`, so the underlying data is the same
       // and we just get more fields by using the RPC type directly.
-      // We should can switch back to `ModelInfo` once the SDK updates its types.
+      // We can switch back to `ModelInfo` once the SDK updates its types.
       const models: ReadonlyArray<Model> = await client.listModels()
       this.cachedModels = models
       this.modelsCachedAt = Date.now()
