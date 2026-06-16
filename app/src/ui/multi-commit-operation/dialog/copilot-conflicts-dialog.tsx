@@ -13,6 +13,7 @@ import {
   isConflictWithMarkers,
 } from '../../../models/status'
 import { getUnmergedFiles, isConflictedFile } from '../../../lib/status'
+import { assertNever } from '../../../lib/fatal-error'
 import { ManualConflictResolution } from '../../../models/manual-conflict-resolution'
 import {
   IFileResolution,
@@ -431,21 +432,28 @@ export class CopilotConflictsDialog extends React.Component<
   private renderTabContent(
     unmergedFiles: ReadonlyArray<WorkingDirectoryFileChange>
   ): JSX.Element {
-    if (this.state.selectedTab === CopilotConflictsTab.Changes) {
-      const conflictedFiles = unmergedFiles.filter(f =>
-        isConflictedFile(f.status)
-      )
-      return (
-        <CopilotConflictsChanges
-          repository={this.props.repository}
-          dispatcher={this.props.dispatcher}
-          conflictedFiles={conflictedFiles}
-          copilotResolutions={this.props.copilotResolutions}
-        />
-      )
+    switch (this.state.selectedTab) {
+      case CopilotConflictsTab.Changes: {
+        const conflictedFiles = unmergedFiles.filter(f =>
+          isConflictedFile(f.status)
+        )
+        return (
+          <CopilotConflictsChanges
+            repository={this.props.repository}
+            dispatcher={this.props.dispatcher}
+            conflictedFiles={conflictedFiles}
+            copilotResolutions={this.props.copilotResolutions}
+          />
+        )
+      }
+      case CopilotConflictsTab.Summary:
+        return this.renderSummaryContent(unmergedFiles)
+      default:
+        return assertNever(
+          this.state.selectedTab,
+          `Unknown tab: ${this.state.selectedTab}`
+        )
     }
-
-    return this.renderSummaryContent(unmergedFiles)
   }
 
   public render() {
