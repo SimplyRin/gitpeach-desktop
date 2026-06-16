@@ -26,24 +26,52 @@
 // Copilot conflicts result dialog
 #copilot-conflicts-dialog {
   width: 100%;
-  max-width: calc(100vw - var(--spacing-double) * 4);
-  max-height: calc(100vh - var(--spacing-double) * 4);
-
-  &.copilot-conflicts-changes-active {
-    width: 800px;
-  }
+  height: 100%;
+  max-width: calc(100% - var(--spacing-double) * 4);
+  max-height: calc(100% - var(--spacing-double) * 4);
 
   .tab-bar.tabs {
-    margin: calc(-1 * var(--spacing-double)) calc(-1 * var(--spacing-double)) var(--spacing) calc(-1 * var(--spacing-double));
+    flex-shrink: 0;
   }
 
   .copilot-changes-tab {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-double);
-    color: var(--text-secondary-color);
+    min-height: 0;
+    flex-grow: 1;
+    border: var(--base-border);
+    border-radius: var(--border-radius);
+    margin: var(--spacing);
+
+    .copilot-changes-header {
+      padding: var(--spacing);
+      border-bottom: var(--base-border);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .copilot-changes-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+
+      .copilot-changes-file-list {
+        border-right: var(--base-border);
+        width: 200px;
+        min-width: 200px;
+      }
+
+      .copilot-changes-no-diff {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        padding: var(--spacing-double);
+        color: var(--text-secondary-color);
+        text-align: center;
+      }
+    }
   }
 
   .dialog-header {
@@ -83,10 +111,18 @@
   }
 
   .dialog-content {
-    overflow-y: auto;
+    padding: 0;
+    overflow: hidden;
     flex: 1;
     min-height: 0;
-    max-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .copilot-conflicts-summary-content {
+    padding: var(--spacing-double);
+    overflow-y: auto;
+    flex: 1;
   }
 
   .copilot-conflicts-file-heading {

@@ -421,10 +421,10 @@ export class CopilotConflictsDialog extends React.Component<
     unmergedFiles: ReadonlyArray<WorkingDirectoryFileChange>
   ): JSX.Element {
     return (
-      <>
+      <div className="copilot-conflicts-summary-content">
         {this.renderResolutionSummary()}
         {this.renderFileList(unmergedFiles)}
-      </>
+      </div>
     )
   }
 
@@ -437,6 +437,8 @@ export class CopilotConflictsDialog extends React.Component<
       )
       return (
         <CopilotConflictsChanges
+          repository={this.props.repository}
+          dispatcher={this.props.dispatcher}
           conflictedFiles={conflictedFiles}
           copilotResolutions={this.props.copilotResolutions}
         />
@@ -460,15 +462,9 @@ export class CopilotConflictsDialog extends React.Component<
 
     const showChangesTab = enableCopilotConflictResolutionChangesTab()
 
-    const dialogClassName =
-      showChangesTab && selectedTab === CopilotConflictsTab.Changes
-        ? 'copilot-conflicts-changes-active'
-        : undefined
-
     return (
       <Dialog
         id="copilot-conflicts-dialog"
-        className={dialogClassName}
         titleId={CopilotConflictsDialogTitleId}
         dismissDisabled={isContinuing}
         onDismissed={this.props.onDismissed}
