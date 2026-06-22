@@ -5976,6 +5976,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
         error: e,
         originalWorktree,
       })
+      return
     }
 
     await this._refreshWorktrees(repository)
