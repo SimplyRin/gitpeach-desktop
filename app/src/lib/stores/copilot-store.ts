@@ -768,13 +768,16 @@ export class CopilotStore extends BaseStore {
 
   /**
    * Stops the given Copilot client.
+   *
+   * Deliberately "fire-and-forget" because the SDK's `stop()` can take a while
+   * to complete, and we don't want to block the UI or any other Copilot
+   * operations while waiting for it. Any errors during stopping are logged but
+   * not propagated.
    */
-  private async stopClient(client: CopilotClient): Promise<void> {
-    try {
-      await client.stop()
-    } catch (error) {
+  private stopClient(client: CopilotClient): void {
+    client.stop().catch(error => {
       log.error('CopilotStore: Error stopping client', error)
-    }
+    })
   }
 
   private async createCancellableSession(
